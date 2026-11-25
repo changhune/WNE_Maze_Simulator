@@ -1,0 +1,1957 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Maze Bot Code Generator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: step list + setup on the left, sticky course preview on the right, generated code across the bottom. */
+:root{
+  --bg:#f2f4f7; --panel:#ffffff; --panel2:#f7f9fb; --ink:#16202b; --muted:#566676; --line:#d8dfe6;
+  --accent:#1d4f91; --accent-ink:#ffffff; --accent-soft:#e3edf9;
+  --ok:#1b7a4b; --warn:#a85d00; --bad:#b3261e; --bad-soft:#fbe9e7; --warn-soft:#fff3df; --ok-soft:#e5f4ec;
+  --floor:#e8d6a8; --wall:#6d5340; --wall-line:#4a382a; --tape:#c62828; --path:#1d4f91; --robot:#1d4f91; --ghost:#6d7b89;
+  --code-bg:#0f1720; --code-ink:#dce6f0; --code-dim:#7f93a8;
+  --font-head:"Space Grotesk","Segoe UI",system-ui,sans-serif; --font-body:"Inter","Segoe UI",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e141b; --panel:#161f29; --panel2:#1b2632; --ink:#e5ecf3; --muted:#93a4b5; --line:#2a3846;
+    --accent:#6fa8ff; --accent-ink:#0b1420; --accent-soft:#1c2c44;
+    --ok:#56c88b; --warn:#f0a94a; --bad:#ff8077; --bad-soft:#3a1f1d; --warn-soft:#3a2d17; --ok-soft:#16301f;
+    --floor:#3b3425; --wall:#8d6d54; --wall-line:#b08b6d; --tape:#e04b4b; --path:#6fa8ff; --robot:#6fa8ff; --ghost:#8b9bab;
+    --code-bg:#0a1017; --code-ink:#dce6f0; --code-dim:#6f8397;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e141b; --panel:#161f29; --panel2:#1b2632; --ink:#e5ecf3; --muted:#93a4b5; --line:#2a3846;
+  --accent:#6fa8ff; --accent-ink:#0b1420; --accent-soft:#1c2c44;
+  --ok:#56c88b; --warn:#f0a94a; --bad:#ff8077; --bad-soft:#3a1f1d; --warn-soft:#3a2d17; --ok-soft:#16301f;
+  --floor:#3b3425; --wall:#8d6d54; --wall-line:#b08b6d; --tape:#e04b4b; --path:#6fa8ff; --robot:#6fa8ff; --ghost:#8b9bab;
+  --code-bg:#0a1017; --code-ink:#dce6f0; --code-dim:#6f8397;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-head);margin:0;text-wrap:balance}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.15}
+h2{font-size:16px;font-weight:600}
+h3{font-size:13px;font-weight:600}
+.sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+header .flow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding:0;list-style:none;counter-reset:f}
+header .flow li{counter-increment:f;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);font-size:13px}
+header .flow li::before{content:counter(f) ". ";font-weight:600;color:var(--accent)}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);align-items:start}
+.route{grid-area:route}.setup{grid-area:setup}.mapcard{grid-area:map}.codecard{grid-area:code}
+.grid{grid-template-areas:"map" "route" "setup" "code"}
+@media (min-width:1040px){
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-areas:"route map" "setup map" "code code"}
+  .mapcard{position:sticky;top:12px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-bottom:12px}
+.card-head .hint{color:var(--muted);font-size:12.5px;margin:2px 0 0}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:6px 12px;font-weight:500;line-height:1.3}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:3px 8px;font-size:12.5px}
+.btn:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0;width:100%}
+input[type=checkbox]{width:auto}
+input[type=range]{padding:0;border:0;background:none}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+label.inline{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--ink)}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+/* steps */
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.step{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:8px 10px}
+.step.hl{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.step.bad{border-color:var(--bad)}
+.step-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.idx{font-family:var(--font-mono);font-size:12px;color:var(--muted);width:20px}
+.step-head select{width:auto;flex:1 1 170px}
+.dur{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.badge{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--bad-soft);color:var(--bad)}
+.tools{margin-left:auto;display:flex;gap:4px}
+.tools button{border:1px solid var(--line);background:var(--panel);border-radius:6px;width:28px;height:28px;line-height:1}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-top:8px}
+.addrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.addrow select{width:auto;flex:1 1 200px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.presets span{font-size:12px;color:var(--muted)}
+/* setup */
+details{border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+details+details{margin-top:8px}
+summary{cursor:pointer;padding:9px 12px;font-weight:600;font-family:var(--font-head);font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--muted);font-family:var(--font-mono)}
+details[open]>summary::after{content:"\2212"}
+.dbody{padding:4px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+[hidden]{display:none!important}
+.testbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:12px;border:1px solid var(--line,#ccc);border-radius:999px;padding:2px 9px;background:transparent;color:inherit;cursor:pointer}
+.chip.okc{border-color:var(--ok);color:var(--ok)}.chip.badc{border-color:var(--bad);color:var(--bad)}
+.callout{border-radius:8px;padding:8px 10px;font-size:12.5px;background:var(--warn-soft);color:var(--warn);border:1px solid transparent}
+.callout.bad{background:var(--bad-soft);color:var(--bad)}
+.callout.ok{background:var(--ok-soft);color:var(--ok)}
+.warns{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+/* map */
+.mapwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2)}
+svg.map{display:block;width:100%;height:auto}
+svg.map text{font-family:var(--font-head);font-weight:600;fill:var(--muted);font-size:1.5px;letter-spacing:.05px}
+.floor{fill:var(--floor)}.wallr{fill:var(--wall);stroke:var(--wall-line);stroke-width:.12}
+.outline{fill:none;stroke:var(--wall-line);stroke-width:.5}
+.tape{fill:var(--tape)}.stageline{stroke:var(--ink);stroke-width:.12;stroke-dasharray:.7 .5;opacity:.55}
+.checkA{fill:var(--ink);opacity:.8}.checkB{fill:var(--floor)}
+.pathline{fill:none;stroke:var(--path);stroke-width:.28;stroke-linejoin:round;stroke-linecap:round}
+.pathhl{fill:none;stroke:var(--tape);stroke-width:.5;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.foot{fill:none;stroke:var(--path);stroke-width:.1;opacity:.45}
+.ghost{fill:none;stroke:var(--ghost);stroke-width:.14;stroke-dasharray:.5 .4}
+.robot{fill:var(--robot);fill-opacity:.28;stroke:var(--robot);stroke-width:.2}
+.nose{fill:var(--robot)}
+.hit{stroke:var(--bad);stroke-width:.45;stroke-linecap:round}
+.scrub{display:flex;align-items:center;gap:10px;margin-top:10px}
+.scrub input{flex:1}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel2)}
+.stat .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--font-head);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat.good .v{color:var(--ok)}.stat.badx .v{color:var(--bad)}.stat.warnx .v{color:var(--warn)}
+table.score{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+table.score td{padding:4px 0;border-bottom:1px solid var(--line)}
+table.score td:last-child{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+table.score tr.total td{font-weight:700;border-bottom:0;font-size:14px}
+table.score td.dim{color:var(--muted)}
+.legend{font-size:12px;color:var(--muted);margin:8px 0 0}
+/* code */
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--panel2);border-radius:8px 8px 0 0;padding:6px 12px;font-family:var(--font-mono);font-size:12.5px}
+.tab[aria-selected="true"]{background:var(--code-bg);color:var(--code-ink);border-color:var(--code-bg)}
+.codebox{position:relative;background:var(--code-bg);border-radius:0 10px 10px 10px;margin-top:-1px}
+pre.code{margin:0;padding:14px 16px;color:var(--code-ink);font-family:var(--font-mono);font-size:12.5px;line-height:1.55;overflow:auto;max-height:560px;tab-size:4}
+pre.code .c{color:var(--code-dim)}
+.codebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-top:10px}
+.copied{color:var(--ok);font-size:12.5px;font-weight:600}
+.how{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:12.5px}
+.how code,.note code{font-family:var(--font-mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--ink)}
+.sensors{display:flex;flex-direction:column;gap:8px}
+.sensor{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:8px 10px}
+.sensor.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.shead{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.shead input{flex:1 1 120px;width:auto}
+.stype{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px}
+.stype.sh{background:var(--accent-soft);color:var(--accent)}.stype.sw{background:var(--warn-soft);color:var(--warn)}
+svg.rbt{display:block;width:100%;max-width:560px;height:auto;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;cursor:crosshair}
+.rb-body{fill:var(--accent-soft);stroke:var(--accent);stroke-width:.12}
+.rb-wheel{fill:var(--muted)}
+.rb-arrow{fill:none;stroke:var(--accent);stroke-width:.14;stroke-linecap:round;stroke-linejoin:round}
+svg.rbt text.rb-t{font-family:var(--font-body);font-size:.8px;fill:var(--muted)}
+svg.rbt text.rb-t.b{fill:var(--ink);font-weight:600}
+.rb-beam{stroke:var(--accent);stroke-width:.1;stroke-dasharray:.3 .25}
+.rb-whisk{stroke:var(--warn);stroke-width:.14}
+.smark-sharp{fill:var(--accent)}.smark-sw{fill:var(--warn)}
+.selm{stroke:var(--ink);stroke-width:.12}
+.sbeam{stroke:var(--accent);stroke-width:.1;stroke-dasharray:.35 .3;opacity:.8}
+.swhisk{stroke:var(--warn);stroke-width:.16}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ENGR 103 · Design Project 2 · AutoBot</div>
+    <h1>Maze Bot Code Generator</h1>
+    <p class="sub">The robot is placed in a random position and heading, so there is no route to plan. Choose the sensors you attach, check how the strategy behaves on a scale drawing of the course, and get MicroPython for a Raspberry Pi Pico 2 W with a Kitronik 5331 motor driver and your <code>WNE103.py</code> motor functions.</p>
+    <ol class="flow">
+      <li>Enter your robot size, attach sensors and calibrate</li>
+      <li>Test random starts on the preview</li>
+      <li>Copy the code into Thonny</li>
+    </ol>
+  </header>
+
+  <div class="grid">
+    <!-- ROUTE -->
+    <section class="card route" aria-labelledby="h-route">
+      <div class="card-head">
+        <div><h2 id="h-route">Strategy</h2><p class="hint" id="route-hint"></p></div>
+        <div class="presets"><span>Mode:</span>
+          <button class="btn small" type="button" data-mode="auto" id="mode-auto">Random start</button>
+          <button class="btn small" type="button" data-mode="steps" id="mode-steps">Fixed route (advanced)</button>
+        </div>
+      </div>
+
+      <div id="auto-ui">
+        <div class="row">
+          <label>Strategy<select id="a-style" data-path="auto.style"><option value="bump">Bump, back up, turn away</option><option value="wall">Follow a wall</option></select></label>
+          <label class="f-wall">Keep the wall on the<select id="a-hand" data-path="auto.hand"><option value="R">Right</option><option value="L">Left</option></select></label>
+          <label class="inline"><input type="checkbox" id="a-orient" data-path="auto.orient"> Spin first to find the open direction (needs a front Sharp)</label>
+        </div>
+        <div class="row">
+          <label>Stop when<select id="a-finish" data-path="auto.finish"><option value="edge">The down-facing Sharp sees the edge</option><option value="timer">A timer runs out</option></select></label>
+          <label class="f-timer">Stop after (s)<input class="num" type="number" step="1" min="1" id="a-stop" data-path="auto.stopAfter"></label>
+          <label class="f-edge">Edge seen when reading is more than floor by (in)<input class="num" type="number" step="0.5" min="0.5" id="a-edge" data-path="auto.edgeMargin"></label>
+        </div>
+        <div class="row">
+          <label>Speed (%)<input class="num" type="number" step="1" min="20" max="100" id="a-speed" data-path="auto.speed"></label>
+          <label>Back up after a bump (in)<input class="num" type="number" step="0.1" min="0" id="a-backup" data-path="auto.backup"></label>
+          <label>Front Sharp: turn away at (in)<input class="num" type="number" step="0.1" min="4" id="a-avoid" data-path="auto.avoid"></label>
+        </div>
+        <div class="row f-bump">
+          <label>Turn away, at least (&deg;)<input class="num" type="number" step="1" min="5" id="a-tmin" data-path="auto.turnMin"></label>
+          <label>Turn away, at most (&deg;)<input class="num" type="number" step="1" min="5" id="a-tmax" data-path="auto.turnMax"></label>
+          <label>Steer back toward the end (gain)<input class="num" type="number" step="0.05" min="0" id="a-kh" data-path="auto.kh"></label>
+          <label>Largest steering (%)<input class="num" type="number" step="1" min="0" id="a-ms" data-path="auto.maxSteer"></label>
+          <label>Stuck after this many bumps<input class="num" type="number" step="1" min="3" id="a-jam" data-path="auto.jam"></label>
+          <label>Escape distance (in)<input class="num" type="number" step="0.5" min="1" id="a-leg" data-path="auto.leg"></label>
+        </div>
+        <div class="row f-wall">
+          <label>Turn after a bump (&deg;)<input class="num" type="number" step="1" min="5" id="a-tang" data-path="auto.turnAng"></label>
+          <label>Switch steering (%)<input class="num" type="number" step="1" min="0" id="a-steer" data-path="auto.steer"></label>
+          <label>Extra clearance before resuming (in)<input class="num" type="number" step="0.5" min="0" id="a-clear" data-path="auto.clear"></label>
+          <label>Side Sharp hold distance (in)<input class="num" type="number" step="0.1" min="4" id="a-hold" data-path="auto.hold"></label>
+          <label>Side Sharp steering gain<input class="num" type="number" step="0.1" min="0" id="a-kp" data-path="auto.kp"></label>
+        </div>
+        <p class="note" id="auto-note"></p>
+        <div class="testbar">
+          <button class="btn primary" type="button" id="run-test">Test random starts on both tracks</button>
+          <span class="note" id="test-sum"></span>
+        </div>
+        <div class="chips" id="test-chips"></div>
+      </div>
+
+      <div id="steps-ui" hidden>
+        <p class="note">The robot runs these steps in order. It only works if it is placed at the planned start position and heading, so use it for practice, not for a random start.</p>
+        <div class="presets"><span>Start from:</span>
+          <button class="btn small" type="button" data-preset="dead" id="pre-dead">Timed, no sensors</button>
+          <button class="btn small" type="button" data-preset="sharp" id="pre-sharp">Timed + Sharp stop</button>
+          <button class="btn small" type="button" data-preset="bump" id="pre-bump">Timed + bump switch</button>
+          <button class="btn small" type="button" data-preset="blank" id="pre-blank">Blank</button>
+        </div>
+        <ol class="steps" id="steps"></ol>
+        <div class="addrow">
+          <select id="add-type" aria-label="Step type to add"></select>
+          <button class="btn primary" type="button" id="add-btn">Add step</button>
+        </div>
+      </div>
+      <div class="warns" id="warns" aria-live="polite"></div>
+    </section>
+
+    <!-- SETUP -->
+    <section class="card setup" aria-labelledby="h-setup">
+      <div class="card-head"><div><h2 id="h-setup">Robot setup</h2><p class="hint">Every value here goes into the generated file.</p></div></div>
+
+      <details open>
+        <summary>Robot and sensors</summary>
+        <div class="dbody">
+          <div class="row">
+            <label>Body length (in)<input class="num" type="number" step="0.1" min="2" id="robot-L" data-path="robot.L"></label>
+            <label>Body width, wheels included (in)<input class="num" type="number" step="0.1" min="2" id="robot-W" data-path="robot.W"></label>
+          </div>
+          <div class="row">
+            <label>Track<select id="track" data-path="track"><option value="bottom">Bottom track (y 17 to 32)</option><option value="top">Top track (y 0 to 15)</option></select></label>
+            <label>Track ends with<select id="c-end" data-path="course.end"><option value="edge">An open edge (the floor ends)</option><option value="wall">A wall</option></select></label>
+          </div>
+          <div class="row">
+            <label>Preview start x (in)<input class="num" type="number" step="0.1" id="start-x" data-path="start.x"></label>
+            <label>Preview start y (in)<input class="num" type="number" step="0.1" id="start-y" data-path="start.y"></label>
+            <label>Preview heading (&deg;, 0 = toward target)<input class="num" type="number" step="1" id="start-deg" data-path="start.deg"></label>
+          </div>
+          <p class="note">On the day the robot is placed anywhere in the Start zone (x = 0 to 12 in) at any heading. The preview shows one start at a time, and the test button tries 24 random ones. Both tracks are on the same floor, so one robot uses one track.</p>
+          <h3>Attach sensors</h3>
+          <svg class="rbt" id="rbt" role="img" aria-label="Top view of the robot rectangle with sensor positions"></svg>
+          <p class="note">The robot faces right. Choose a sensor below, then click an edge of the rectangle to place it, or type the side and offset. Offset is measured from the middle of that edge.</p>
+          <div id="sensors" class="sensors"></div>
+          <div class="addrow">
+            <button class="btn" type="button" id="add-sharp">Add Sharp distance sensor</button>
+            <button class="btn" type="button" id="add-switch">Add 3-way switch</button>
+            <button class="btn" type="button" id="kit-a">Load kit A: switches only</button>
+            <button class="btn" type="button" id="kit-b">Load kit B: switches + Sharps</button>
+          </div>
+          <p class="note">Sharp GP2Y0A21YK0F: analog output to an ADC pin (GP26, 27 or 28), 5 V supply, reads about 4 to 31 in. Switch (MS0850502F01S1A): the lever sits at about 30&deg; to the surface, and you can extend it to wrap around the wheel so one switch covers a whole side. Common to GND, normally-open contact to a GP pin with the Pico pull-up, so pressed reads 0. A Sharp set to "Down at the floor" must be mounted at least 4 in above the floor: it reads that height on the track and a much larger value past the edge. A Sharp avoids a wall; a switch finds it by touching it.</p>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Calibration</summary>
+        <div class="dbody">
+          <div class="callout" id="cal-callout">These numbers are starting guesses. Generate <b>calibrate.py</b> below, run it on your robot, measure, and type your results here.</div>
+          <div class="row">
+            <label>Test speed (%)<input class="num" type="number" step="1" min="1" max="100" id="cal-speed" data-path="cal.calSpeed"></label>
+            <label>Measured travel at that speed (in/s)<input class="num" type="number" step="0.1" min="0.1" id="cal-ips" data-path="cal.speedIps"></label>
+          </div>
+          <div class="row">
+            <label>Turn speed (%)<input class="num" type="number" step="1" min="1" max="100" id="cal-tspeed" data-path="cal.turnSpeed"></label>
+            <label>Measured spin rate at that speed (°/s)<input class="num" type="number" step="1" min="1" id="cal-dps" data-path="cal.turnDps"></label>
+          </div>
+          <div class="row">
+            <label>Pause between steps (ms)<input class="num" type="number" step="10" min="0" id="cal-settle" data-path="cal.settleMs"></label>
+            <label>Stop everything after (s)<input class="num" type="number" step="1" min="10" id="cal-limit" data-path="cal.runLimit"></label>
+          </div>
+          <p class="note">TT motors usually stall below about 30 % duty. Speeds scale linearly in the preview, which is only an approximation, so re-measure if you change speeds a lot.</p>
+          <div><button class="btn small" type="button" id="show-cal">Show calibrate.py</button></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Motors, LED and start trigger</summary>
+        <div class="dbody">
+          <div class="row">
+            <label>Left wheel is motor port<select id="w-left" data-path="wiring.leftMotor" data-type="int"><option value="1">Motor 1</option><option value="2">Motor 2</option></select></label>
+            <label class="inline"><input type="checkbox" id="w-invl" data-path="wiring.invL"> Reverse left wheel</label>
+            <label class="inline"><input type="checkbox" id="w-invr" data-path="wiring.invR"> Reverse right wheel</label>
+          </div>
+          <div class="row">
+            <label>Motor 1 fwd pin (GP)<input class="num" type="number" id="p-m1f" data-path="wiring.pins.m1f"></label>
+            <label>Motor 1 rev pin (GP)<input class="num" type="number" id="p-m1r" data-path="wiring.pins.m1r"></label>
+            <label>Motor 2 fwd pin (GP)<input class="num" type="number" id="p-m2f" data-path="wiring.pins.m2f"></label>
+            <label>Motor 2 rev pin (GP)<input class="num" type="number" id="p-m2r" data-path="wiring.pins.m2r"></label>
+          </div>
+          <p class="note">Defaults match <code>KitronikPicoMotor()</code> in <code>WNE103.py</code>, which then needs no pin arguments. If the robot drives backwards, tick Reverse. If it turns the wrong way, swap the left motor port.</p>
+          <div class="row">
+            <label>LED pin ("LED" = on-board)<input type="text" id="w-led" data-path="wiring.led"></label>
+            <label>Start trigger<select id="w-mode" data-path="wiring.startMode"><option value="delay">Wait, then go</option><option value="button">Wait for button press</option></select></label>
+            <label>Delay / loading time (s)<input class="num" type="number" step="0.5" min="0" id="w-delay" data-path="wiring.delay"></label>
+            <label>Button pin (GP, to GND)<input class="num" type="number" id="w-btn" data-path="wiring.button"></label>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Scoring estimate</summary>
+        <div class="dbody">
+          <div class="row">
+            <label>Full time points (pts)<input class="num" type="number" id="sc-a" data-path="score.a"></label>
+            <label>Full points until (s)<input class="num" type="number" id="sc-t0" data-path="score.t0"></label>
+            <label>Decay rate k (1/s)<input class="num" type="number" step="0.001" id="sc-k" data-path="score.k"></label>
+            <label>Unloading time (s)<input class="num" type="number" step="0.5" id="sc-un" data-path="score.unload"></label>
+          </div>
+          <label class="inline"><input type="checkbox" id="sc-cargo" data-path="score.cargo"> Human and both bears stay on the robot</label>
+          <p class="note">Defaults follow the DP2 rules: 50 points up to 30 s, then 50·exp(−0.008·(t − 30)). The instructors may change this, so edit the numbers if they do.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- MAP -->
+    <section class="card mapcard" aria-labelledby="h-map">
+      <div class="card-head"><div><h2 id="h-map">Course preview</h2><p class="hint">Top view, drawn to scale from the DP2 course drawing (inches, assumed).</p></div></div>
+      <div class="mapwrap"><svg class="map" id="map" role="img" aria-label="Top view of the maze with the predicted robot path"></svg></div>
+      <div class="scrub">
+        <button class="btn small" type="button" id="play">Play</button>
+        <input type="range" id="scrub" min="0" max="1000" value="1000" aria-label="Scrub through the run">
+        <span class="num" id="scrub-t">0.0 s</span>
+      </div>
+      <p class="legend">Blue line: path of the robot center. Shaded band: the Start zone. Switch levers turn red while pressed. The preview models walls as solid, so a bump pushes the robot against the wall without slip or lever flex.</p>
+      <div class="stats" id="stats"></div>
+      <table class="score" id="score"></table>
+    </section>
+
+    <!-- CODE -->
+    <section class="card codecard" aria-labelledby="h-code">
+      <div class="card-head"><div><h2 id="h-code">Generated code</h2><p class="hint">Save <code>WNE103.py</code> and the file below on the Pico (Thonny: File, Save as, Raspberry Pi Pico).</p></div></div>
+      <div class="tabs" role="tablist" aria-label="Generated files">
+        <button class="tab" role="tab" type="button" id="tab-main" aria-selected="true" aria-controls="codebox">main.py (competition run)</button>
+        <button class="tab" role="tab" type="button" id="tab-cal" aria-selected="false" aria-controls="codebox">calibrate.py (measure your robot)</button>
+      </div>
+      <div class="codebox" id="codebox" role="tabpanel"><pre class="code" id="code" tabindex="0"></pre></div>
+      <div class="codebar">
+        <div><button class="btn primary" type="button" id="copy">Copy code</button> <span class="copied" id="copied" hidden>Copied</span></div>
+        <span class="note" id="code-meta"></span>
+      </div>
+      <ol class="how" id="how"></ol>
+    </section>
+  </div>
+</div>
+
+<script id="engine">
+
+/* ===== Maze Bot engine: course geometry, simulator, code generator ===== */
+var MB = (function () {
+  var PXIN = 12.1, X0 = 21, Y0 = 77; // pixels per inch and inner corner, measured on the DP2 drawing
+  function ix(p) { return (p - X0) / PXIN; }
+  function iy(p) { return (p - Y0) / PXIN; }
+  function R(x1, y1, x2, y2) { return { x: ix(x1), y: iy(y1), w: (x2 - x1) / PXIN, h: (y2 - y1) / PXIN }; }
+  var COURSE = {
+    W: ix(1008), H: iy(464),
+    walls: [
+      R(21, 256, 1008, 285),            // center wall
+      R(214, 222, 243, 319),            // block at the start
+      R(340, 173, 369, 366),            // cross wall 1
+      R(534, 77, 563, 174), R(437, 101, 534, 130),   // zone 2 top L
+      R(534, 367, 563, 464), R(437, 411, 534, 440),  // zone 2 bottom L
+      R(660, 173, 689, 366),            // cross wall 2
+      R(785, 77, 882, 106), R(785, 435, 882, 464),   // zone 3 side blocks
+      R(882, 222, 911, 319)             // block before target
+    ],
+    startLine: [ix(178), ix(202)],
+    stageLines: [ix(369), ix(660), ix(911)],
+    targetX: ix(911),
+    narrowGap: (367 - 285) / PXIN
+  };
+  var EPS = 1e-6;
+
+  function polyOf(p, L, W) {
+    var c = Math.cos(p.th), s = Math.sin(p.th), hl = L / 2, hw = W / 2;
+    return [
+      [p.x + c * hl - s * hw, p.y + s * hl + c * hw],
+      [p.x + c * hl + s * hw, p.y + s * hl - c * hw],
+      [p.x - c * hl + s * hw, p.y - s * hl - c * hw],
+      [p.x - c * hl - s * hw, p.y - s * hl + c * hw]
+    ];
+  }
+  function hitRect(poly, q) {
+    var minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9, i;
+    for (i = 0; i < 4; i++) {
+      minx = Math.min(minx, poly[i][0]); maxx = Math.max(maxx, poly[i][0]);
+      miny = Math.min(miny, poly[i][1]); maxy = Math.max(maxy, poly[i][1]);
+    }
+    if (maxx <= q.x + EPS || minx >= q.x + q.w - EPS || maxy <= q.y + EPS || miny >= q.y + q.h - EPS) return false;
+    var axes = [[poly[0][0] - poly[1][0], poly[0][1] - poly[1][1]], [poly[1][0] - poly[2][0], poly[1][1] - poly[2][1]]];
+    var qc = [[q.x, q.y], [q.x + q.w, q.y], [q.x + q.w, q.y + q.h], [q.x, q.y + q.h]];
+    for (var a = 0; a < 2; a++) {
+      var len = Math.hypot(axes[a][0], axes[a][1]), ax = axes[a][0] / len, ay = axes[a][1] / len;
+      var p0 = 1e9, p1 = -1e9, q0 = 1e9, q1 = -1e9, d;
+      for (i = 0; i < 4; i++) {
+        d = poly[i][0] * ax + poly[i][1] * ay; p0 = Math.min(p0, d); p1 = Math.max(p1, d);
+        d = qc[i][0] * ax + qc[i][1] * ay; q0 = Math.min(q0, d); q1 = Math.max(q1, d);
+      }
+      if (p1 <= q0 + EPS || q1 <= p0 + EPS) return false;
+    }
+    return true;
+  }
+  function collides(p, L, W) {
+    var poly = polyOf(p, L, W), i;
+    for (i = 0; i < 4; i++) {
+      if (poly[i][0] < -EPS || (!COURSE.open && poly[i][0] > COURSE.W + EPS) || poly[i][1] < -EPS || poly[i][1] > COURSE.H + EPS) return true;
+    }
+    for (i = 0; i < COURSE.walls.length; i++) if (hitRect(poly, COURSE.walls[i])) return true;
+    return false;
+  }
+  function rayRect(ox, oy, dx, dy, q) {
+    var tmin = 0, tmax = Infinity, ax;
+    for (ax = 0; ax < 2; ax++) {
+      var o = ax ? oy : ox, d = ax ? dy : dx, lo = ax ? q.y : q.x, hi = lo + (ax ? q.h : q.w);
+      if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) return Infinity; }
+      else {
+        var t1 = (lo - o) / d, t2 = (hi - o) / d, tmp;
+        if (t1 > t2) { tmp = t1; t1 = t2; t2 = tmp; }
+        tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+        if (tmin > tmax) return Infinity;
+      }
+    }
+    return tmin;
+  }
+  function rayDist(ox, oy, dx, dy) {
+    var t = Infinity, i;
+    if (dx > 1e-9) { if (!COURSE.open) t = Math.min(t, (COURSE.W - ox) / dx); } else if (dx < -1e-9) t = Math.min(t, (0 - ox) / dx);
+    if (dy > 1e-9) t = Math.min(t, (COURSE.H - oy) / dy); else if (dy < -1e-9) t = Math.min(t, (0 - oy) / dy);
+    t = Math.max(t, 0);
+    for (i = 0; i < COURSE.walls.length; i++) t = Math.min(t, rayRect(ox, oy, dx, dy, COURSE.walls[i]));
+    return t;
+  }
+
+  var STEP_TYPES = {
+    fwd:   { label: 'Forward',  fields: [['dist', 'Distance (in)', 12], ['speed', 'Speed (%)', 60]] },
+    back:  { label: 'Backward', fields: [['dist', 'Distance (in)', 4], ['speed', 'Speed (%)', 60]] },
+    turn:  { label: 'Turn in place', fields: [['dir', 'Direction', 'L'], ['deg', 'Angle (°)', 90]] },
+    drive: { label: 'Curve (set each wheel)', fields: [['l', 'Left wheel (%)', 60], ['r', 'Right wheel (%)', 40], ['sec', 'Time (s)', 1]] },
+    wait:  { label: 'Wait',     fields: [['sec', 'Time (s)', 1]] },
+    until: { label: 'Forward until sensor triggers', needs: 'any', fields: [['sensor', 'Sensor', null], ['stop', 'Stop at (in)', 4.5], ['speed', 'Speed (%)', 60], ['max', 'Give up after (s)', 4]] },
+    follow:{ label: 'Follow wall (Sharp sensor)', needs: 'sharp', fields: [['sensor', 'Sensor', null], ['hold', 'Hold distance (in)', 5], ['speed', 'Speed (%)', 55], ['kp', 'Steering gain', 4], ['sec', 'Time (s)', 3]] }
+  };
+
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  function sensorById(S, id) { for (var i = 0; i < S.sensors.length; i++) if (S.sensors[i].id === id) return S.sensors[i]; return null; }
+  function isDown(sn) { return sn.kind === 'sharp' && sn.aim === 'down'; }
+
+  /* Mount point and outward direction in course coordinates. offset: + is to the robot's right (front/rear) or forward (left/right). */
+  function sensorGeom(S, sn, p) {
+    var c = Math.cos(p.th), s = Math.sin(p.th), fx = c, fy = s, rx = -s, ry = c, L = S.robot.L, W = S.robot.W;
+    var half = (sn.side === 'front' || sn.side === 'rear') ? W / 2 : L / 2, o = clamp(sn.offset, -half, half);
+    switch (sn.side) {
+      case 'rear':  return { x: p.x - fx * L / 2 + rx * o, y: p.y - fy * L / 2 + ry * o, dx: -fx, dy: -fy };
+      case 'left':  return { x: p.x - rx * W / 2 + fx * o, y: p.y - ry * W / 2 + fy * o, dx: -rx, dy: -ry };
+      case 'right': return { x: p.x + rx * W / 2 + fx * o, y: p.y + ry * W / 2 + fy * o, dx: rx, dy: ry };
+      default:      return { x: p.x + fx * L / 2 + rx * o, y: p.y + fy * L / 2 + ry * o, dx: fx, dy: fy };
+    }
+  }
+  /* Micro-switch lever: starts at the switch, lies along the robot's edge and is bent outward by leverAng (about 15 degrees). */
+  function leverSeg(S, sn, p) {
+    var g = sensorGeom(S, sn, p), c = Math.cos(p.th), s = Math.sin(p.th), a;
+    if (sn.side === 'front' || sn.side === 'rear') a = sn.leverDir === 'right' ? [-s, c] : [s, -c];
+    else a = sn.leverDir === 'back' ? [-c, -s] : [c, s];
+    var A = (sn.leverAng == null ? 30 : sn.leverAng) * Math.PI / 180, len = sn.lever == null ? 1.5 : sn.lever;
+    var ox = Math.cos(A) * a[0] + Math.sin(A) * g.dx, oy = Math.cos(A) * a[1] + Math.sin(A) * g.dy;
+    return { x1: g.x, y1: g.y, x2: g.x + ox * len, y2: g.y + oy * len };
+  }
+  function segHitsRect(sg, q) {
+    var t0 = 0, t1 = 1, dx = sg.x2 - sg.x1, dy = sg.y2 - sg.y1;
+    var P = [-dx, dx, -dy, dy], Q = [sg.x1 - q.x, q.x + q.w - sg.x1, sg.y1 - q.y, q.y + q.h - sg.y1];
+    for (var i = 0; i < 4; i++) {
+      if (Math.abs(P[i]) < 1e-12) { if (Q[i] < 0) return false; }
+      else {
+        var t = Q[i] / P[i];
+        if (P[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+        else { if (t < t0) return false; if (t < t1) t1 = t; }
+      }
+    }
+    return true;
+  }
+  function leverHit(S, sn, p) {
+    var sg = leverSeg(S, sn, p), i;
+    for (i = 0; i < COURSE.walls.length; i++) if (segHitsRect(sg, COURSE.walls[i])) return true;
+    var pts = [[sg.x1, sg.y1], [sg.x2, sg.y2]];
+    for (i = 0; i < 2; i++) {
+      if (pts[i][0] < 0 || pts[i][1] < 0 || pts[i][1] > COURSE.H || (!COURSE.open && pts[i][0] > COURSE.W)) return true;
+    }
+    return false;
+  }
+  function sensorDist(S, sn, p) {
+    var g = sensorGeom(S, sn, p);
+    if (isDown(sn)) {   // Sharp aimed at the floor: reads its height, or nothing past the edge
+      var onFloor = g.x >= 0 && g.y >= 0 && g.y <= COURSE.H && (!COURSE.open || g.x <= COURSE.W);
+      return onFloor ? (sn.height == null ? 4.5 : sn.height) : 99;
+    }
+    return Math.min(99, rayDist(g.x, g.y, g.dx, g.dy));
+  }
+  /* GP2Y0A21YK0F: valid about 4 to 31 in. Closer than 4 in the output folds over and looks farther away. */
+  function sharpIn(d) { if (d > 31.5) return 99; if (d < 4) return 4 + 3 * (4 - d); return d; }
+  function triggered(S, sn, p, stop) {
+    if (!sn) return false;
+    if (sn.kind === 'switch') return leverHit(S, sn, p);
+    return sharpIn(sensorDist(S, sn, p)) <= stop;
+  }
+
+  /* Sensors the autonomous strategy uses, picked by role. */
+  function autoSensors(S) {
+    var side = S.auto.hand === 'L' ? 'left' : 'right';
+    var o = { fs: null, fsl: [], fb: [], hs: null, hb: [], ds: null };
+    S.sensors.forEach(function (x) {
+      if (x.kind === 'sharp') {
+        if (isDown(x)) { if (!o.ds) o.ds = x; }
+        else if (x.side === 'front') { if (!o.fs) o.fs = x; o.fsl.push(x); }
+        else if (x.side === side) { if (!o.hs) o.hs = x; }
+      } else {
+        if (x.side === 'front') o.fb.push(x); else if (x.side === side) o.hb.push(x);
+      }
+    });
+    return o;
+  }
+  function classify(S) {
+    var o = { fs: null, ls: null, rs: null, fb: [], lb: [], rb: [] };
+    S.sensors.forEach(function (x) {
+      if (x.kind === 'sharp') { if (isDown(x)) return; if (x.side === 'front' && !o.fs) o.fs = x; else if (x.side === 'left' && !o.ls) o.ls = x; else if (x.side === 'right' && !o.rs) o.rs = x; }
+      else { if (x.side === 'front') o.fb.push(x); else if (x.side === 'left') o.lb.push(x); else if (x.side === 'right') o.rb.push(x); }
+    });
+    return o;
+  }
+
+  function simulate(S, opt) {
+    opt = opt || {};
+    COURSE.open = !!(S.course && S.course.end === 'edge');
+    var c = S.cal, rb = S.robot, W = rb.W, L = rb.L, limit = opt.limit || c.runLimit;
+    function v(pct) { return c.speedIps * pct / c.calSpeed; }
+    var track = 2 * v(c.turnSpeed) / (c.turnDps * Math.PI / 180);
+    var dtMax = opt.dt || 0.005, settle = c.settleMs / 1000;
+    var p = { x: S.start.x, y: S.start.y, th: S.start.deg * Math.PI / 180 };
+    var t = 0, stuck = null, timeout = false, maxX = p.x, bumps = 0;
+    var path = [{ x: p.x, y: p.y, th: p.th, t: 0 }], ranges = [];
+    if (collides(p, L, W)) stuck = { step: -1, t: 0, x: p.x, y: p.y, th: p.th };
+
+    function advance(vl, vr, h) {
+      var vv = (vl + vr) / 2, om = (vl - vr) / track;
+      p.th += om * h; p.x += vv * Math.cos(p.th) * h; p.y += vv * Math.sin(p.th) * h; t += h;
+      if (p.x > maxX) maxX = p.x;
+    }
+    function segment(dur, wheels, i) {
+      var k = 0, el = 0, h;
+      while (el < dur - 1e-9) {
+        h = Math.min(dtMax, dur - el);
+        var w = wheels(el);
+        if (!w) break;
+        var prev = { x: p.x, y: p.y, th: p.th };
+        advance(w[0], w[1], h); el += h; k++;
+        if (collides(p, L, W)) {
+          if (S.mode === 'auto') {
+            var nx = p.x, ny = p.y, nth = p.th; bumps++;
+            p.x = prev.x; p.y = prev.y; p.th = nth;              // turn in place only
+            if (collides(p, L, W)) { p.th = prev.th; p.x = nx; p.y = prev.y;   // slide along x
+              if (collides(p, L, W)) { p.x = prev.x; p.y = ny;                 // slide along y
+                if (collides(p, L, W)) { p.x = prev.x; p.y = prev.y; } } }
+          }   // the robot is pushing against the wall
+          else { stuck = { step: i, t: t, x: p.x, y: p.y, th: p.th }; return el; }
+        }
+        if (COURSE.open && p.x > COURSE.W) { stuck = { step: i, t: t, x: p.x, y: p.y, th: p.th, fell: true }; return el; }
+        if (t > limit) { timeout = true; return el; }
+        if (k % 10 === 0) path.push({ x: p.x, y: p.y, th: p.th, t: t });
+      }
+      path.push({ x: p.x, y: p.y, th: p.th, t: t });
+      return el;
+    }
+    function pause() { if (!stuck && !timeout) { t += settle; path.push({ x: p.x, y: p.y, th: p.th, t: t }); } }
+    function rd(sn) { return sharpIn(sensorDist(S, sn, p)); }
+    function rf(R) { var m = 99; R.fsl.forEach(function (x) { m = Math.min(m, rd(x)); }); return m; }
+    function anyHit(list) { return list.some(function (x) { return leverHit(S, x, p); }); }
+
+    /* ---------- autonomous strategy (must match genAuto) ---------- */
+    function runAuto() {
+      var A = S.auto, R = autoSensors(S), hand = A.hand === 'L' ? 1 : -1, vt = v(c.turnSpeed), spv = v(A.speed);
+      function pivot(dir, deg, withPause) { var sg = dir === 'L' ? -1 : 1; segment(deg / c.turnDps, function () { return [sg * vt, -sg * vt]; }, 0); if (withPause) pause(); }
+      function away(deg, withPause) { pivot(A.hand === 'L' ? 'R' : 'L', deg, withPause); }
+      if (A.orient && R.fs) {
+        var samples = [], next = 0, i0 = path.length - 1, t0 = t;
+        segment(360 / c.turnDps, function (el) { if (el >= next - 1e-9) { samples.push([el, rf(R)]); next += 0.015; } return [vt, -vt]; }, 0);
+        pause();
+        var n = samples.length;
+        if (!stuck && !timeout && n >= 6) {
+          var avg = [], q, lo, hi, sum, k;
+          for (q = 0; q < n; q++) { lo = Math.max(0, q - 2); hi = Math.min(n, q + 3); sum = 0; for (k = lo; k < hi; k++) sum += samples[k][1]; avg.push(sum / (hi - lo)); }
+          var best = Math.max.apply(null, avg), mid = 0, bl = 0, a = 0, b;
+          while (a < n) {
+            if (avg[a] >= best - 1) { b = a; while (b < n && avg[b] >= best - 1) b++; if (b - a > bl) { bl = b - a; mid = Math.floor((a + b - 1) / 2); } a = b; }
+            else a++;
+          }
+          var angle = samples[mid][0] * c.turnDps;
+          if (angle > 180) pivot('L', 360 - angle, true); else pivot('R', angle, true);
+        }
+        ranges.push({ name: 'Find open direction', t0: t0, t1: t, i0: i0, i1: path.length - 1, dur: t - t0, pose: { x: p.x, y: p.y, th: p.th } });
+      }
+      function scanTurn() {
+        var samples = [], next = 0;
+        segment(360 / c.turnDps, function (el) { if (el >= next - 1e-9) { samples.push([el, rf(R)]); next += 0.015; } return [vt, -vt]; }, 0);
+        pause();
+        var n = samples.length; if (stuck || timeout || n < 6) return;
+        var avg = [], q, lo, hi, sum, k;
+        for (q = 0; q < n; q++) { lo = Math.max(0, q - 2); hi = Math.min(n, q + 3); sum = 0; for (k = lo; k < hi; k++) sum += samples[k][1]; avg.push(sum / (hi - lo)); }
+        var best = Math.max.apply(null, avg), mid = 0, bl = 0, a = 0, b;
+        while (a < n) { if (avg[a] >= best - 1) { b = a; while (b < n && avg[b] >= best - 1) b++; if (b - a > bl) { bl = b - a; mid = Math.floor((a + b - 1) / 2); } a = b; } else a++; }
+        var angle = samples[mid][0] * c.turnDps;
+        if (angle > 180) pivot('L', 360 - angle, true); else pivot('R', angle, true);
+      }
+      if (A.style === 'bump') {
+        var swL = [], swR = [];
+        S.sensors.forEach(function (x) { if (x.kind !== 'switch') return;
+          if (x.side === 'left' || (x.side === 'front' && x.offset < -0.01)) swL.push(x);
+          else if (x.side === 'right' || (x.side === 'front' && x.offset > 0.01)) swR.push(x);
+          else { swL.push(x); swR.push(x); } });
+        var fwdd = 0, bcnt = 0, est = 0, tb = t, edgesB = 0, utB = A.finish === 'timer' || !R.ds, gb = 0, rng = (A.seed || 1) * 9301 % 233280;
+        function rand() { rng = (rng * 9301 + 49297) % 233280; return rng / 233280; }
+        function turnBy(dir, deg) { pivot(dir, deg, true); est += (dir === 'R' ? 1 : -1) * deg; }
+        while (!stuck && !timeout && gb++ < 100000) {
+          if (utB && t - tb > A.stopAfter) break;
+          if (!utB) { if (rd(R.ds) > (R.ds.height == null ? 4.5 : R.ds.height) + A.edgeMargin) edgesB++; else edgesB = 0; if (edgesB >= 2) break; }
+          var hl = anyHit(swL), hr = anyHit(swR), fdist = R.fs ? rf(R) : 99;
+          if (bcnt >= A.jam) {   // jammed: many bumps with almost no forward travel, so back out and turn around
+            segment(A.backup * 2 / spv, function () { return [-spv, -spv]; }, 0); pause();
+            turnBy(rand() < 0.5 ? 'L' : 'R', 90 + rand() * 90);
+            segment(A.leg / spv, function () { return [spv, spv]; }, 0); pause(); bcnt = 0; fwdd = 0; continue;
+          }
+          if (hl || hr || fdist <= A.avoid) {
+            bcnt++;
+            if (hl || hr) { segment(A.backup / spv, function () { return [-spv, -spv]; }, 0); pause(); }
+            var ang = A.turnMin + rand() * (A.turnMax - A.turnMin), dir;
+            if (hl && !hr) dir = 'R'; else if (hr && !hl) dir = 'L'; else dir = rand() < 0.5 ? 'L' : 'R';
+            turnBy(dir, ang); continue;
+          }
+          var cor = clamp(est * A.kh, -A.maxSteer, A.maxSteer);   // turned right (est > 0): slow the left wheel to steer back left
+          var lw2 = v(A.speed - cor), rw2 = v(A.speed + cor);
+          segment(0.02, function () { return [lw2, rw2]; }, 0);
+          est += (lw2 - rw2) / (2 * v(c.turnSpeed)) * c.turnDps * 0.02;
+          fwdd += spv * 0.02; if (fwdd > 4) { bcnt = 0; fwdd = 0; }
+        }
+        ranges.push({ name: 'Bump and steer', t0: tb, t1: t, i0: 0, i1: path.length - 1, dur: t - tb, pose: { x: p.x, y: p.y, th: p.th } });
+        return;
+      }
+      if (A.style === 'scan' && R.fs) {
+        var tf0 = t, g0 = 0, e0 = 0, ut = A.finish === 'timer' || !R.ds;
+        while (!stuck && !timeout && g0++ < 400) {
+          if (ut && t - tf0 > A.stopAfter) break;
+          scanTurn(); if (stuck || timeout) break;
+          var moved = 0;
+          while (!stuck && !timeout && moved < A.leg) {
+            if (!ut) { if (rd(R.ds) > (R.ds.height == null ? 4.5 : R.ds.height) + A.edgeMargin) e0++; else e0 = 0; if (e0 >= 2) break; }
+            if (anyHit(R.fb)) { segment(A.backup / spv, function () { return [-spv, -spv]; }, 0); pause(); break; }
+            if (rf(R) <= A.avoid) break;
+            segment(0.02, function () { return [spv, spv]; }, 0); moved += spv * 0.02;
+          }
+          pause();
+          if (e0 >= 2) break;
+        }
+        ranges.push({ name: 'Scan and go', t0: tf0, t1: t, i0: 0, i1: path.length - 1, dur: t - tf0, pose: { x: p.x, y: p.y, th: p.th } });
+        return;
+      }
+      var edges = 0, f0 = t, useTimer = A.finish === 'timer' || !R.ds, j0 = path.length - 1, guard = 0, tf = t;
+      while (!stuck && !timeout && guard++ < 200000) {
+        if (useTimer && t - f0 > A.stopAfter) break;
+        var fd = R.fs ? rf(R) : 99, fh = anyHit(R.fb), sh = anyHit(R.hb);
+        var sd = R.hs ? rd(R.hs) : 0, dd = R.ds ? rd(R.ds) : 0;
+        if (!useTimer) {
+          if (dd > (R.ds.height == null ? 4.5 : R.ds.height) + A.edgeMargin) edges++; else edges = 0;
+          if (edges >= 2) break;
+        }
+        if (fh) { segment(A.backup / spv, function () { return [-spv, -spv]; }, 0); pause(); if (stuck || timeout) break; away(A.turnAng, true); continue; }
+        if (R.fs && fd <= A.avoid) {
+          var turned = 0;
+          while (turned < 360 && !stuck && !timeout) { if (rf(R) > A.avoid + A.clear) break; away(10, false); turned += 10; }
+          pause(); continue;
+        }
+        var steer = 0;
+        if (R.hb.length && R.hs) steer = sh ? -A.steer : A.kp * clamp(sd - A.hold, -5, 5);
+        else if (R.hb.length) steer = sh ? -A.steer : A.steer;
+        else if (R.hs) steer = A.kp * clamp(sd - A.hold, -5, 5);
+        steer *= hand;
+        var lw = v(A.speed - steer), rw = v(A.speed + steer);
+        segment(0.02, function () { return [lw, rw]; }, 0);
+      }
+      ranges.push({ name: 'Follow the wall', t0: tf, t1: t, i0: j0, i1: path.length - 1, dur: t - tf, pose: { x: p.x, y: p.y, th: p.th } });
+    }
+
+    /* ---------- custom timed steps ---------- */
+    function reactNone() {}
+    function runSteps() {
+      for (var i = 0; i < S.steps.length && !stuck && !timeout; i++) {
+        var s = S.steps[i], t0 = t, i0 = path.length - 1, el = 0, sp, fn, sn, sg;
+        switch (s.type) {
+          case 'fwd': case 'back':
+            sp = v(s.speed) * (s.type === 'back' ? -1 : 1);
+            el = segment(s.speed > 0 ? s.dist / v(s.speed) : 0, function () { return [sp, sp]; }, i); break;
+          case 'turn':
+            sp = v(c.turnSpeed) * (s.dir === 'L' ? -1 : 1);
+            el = segment(Math.abs(s.deg) / c.turnDps, function () { return [sp, -sp]; }, i); break;
+          case 'drive':
+            el = segment(s.sec, function () { return [v(s.l), v(s.r)]; }, i); break;
+          case 'wait':
+            el = segment(s.sec, function () { return [0, 0]; }, i); break;
+          case 'until':
+            sp = v(s.speed); sn = sensorById(S, s.sensor);
+            el = segment(s.max, function () { return triggered(S, sn, p, s.stop) ? null : [sp, sp]; }, i); break;
+          case 'follow':
+            sp = v(s.speed); sn = sensorById(S, s.sensor);
+            sg = sn && sn.kind === 'sharp' ? (sn.side === 'left' ? 1 : sn.side === 'right' ? -1 : 0) : 0;
+            fn = function () {
+              if (!sg) return [sp, sp];
+              var err = clamp(sharpIn(sensorDist(S, sn, p)) - s.hold, -5, 5), steer = s.kp * err * c.speedIps / c.calSpeed;
+              return sg === 1 ? [sp - steer, sp + steer] : [sp + steer, sp - steer];
+            };
+            el = segment(s.sec, fn, i); break;
+        }
+        ranges.push({ t0: t0, t1: t, i0: i0, i1: path.length - 1, dur: t - t0, pose: { x: p.x, y: p.y, th: p.th } });
+        if (stuck || timeout) break;
+        t += settle;
+        path.push({ x: p.x, y: p.y, th: p.th, t: t });
+      }
+    }
+    if (!stuck) { if (S.mode === 'auto') runAuto(); else runSteps(); }
+    var stages = COURSE.stageLines.map(function (x) { return maxX >= x; });
+    var reached = !stuck && !timeout && p.x >= COURSE.targetX;
+    return { path: path, ranges: ranges, time: t, stuck: stuck, timeout: timeout, maxX: maxX, stages: stages,
+             reached: reached, bumps: bumps, final: { x: p.x, y: p.y, th: p.th }, track: track };
+  }
+
+  /* Run the strategy from many starting headings, as a robot placed at a random orientation would. */
+  function trial(S, deg, opt) {
+    var T = {}, k;
+    for (k in S) T[k] = S[k];
+    T.start = { x: S.start.x, y: S.start.y, deg: deg };
+    var r = simulate(T, opt);
+    return { deg: deg, ok: r.reached, time: r.time, stuck: r.stuck, timeout: r.timeout, stages: r.stages.filter(Boolean).length, x: r.final.x };
+  }
+
+  function poseAt(sim, tt) {
+    var P = sim.path, i;
+    if (tt <= 0) return P[0];
+    if (tt >= P[P.length - 1].t) return P[P.length - 1];
+    for (i = 1; i < P.length; i++) if (P[i].t >= tt) break;
+    var a = P[i - 1], b = P[i], f = b.t === a.t ? 0 : (tt - a.t) / (b.t - a.t);
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, th: a.th + (b.th - a.th) * f };
+  }
+
+  function scoreOf(S, sim) {
+    var sc = S.score, total = S.wiring.delay + sim.time + sc.unload, done = sim.reached;
+    var st = sim.stages.filter(Boolean).length * 10;
+    var timePts = done ? (total <= sc.t0 ? sc.a : sc.a * Math.exp(-sc.k * (total - sc.t0))) : 9;
+    var rows = { stages: st, target: done ? 7 : 0, led: done ? 3 : 0, cargo: done && sc.cargo ? 10 : 0, time: timePts };
+    rows.total = rows.stages + rows.target + rows.led + rows.cargo + rows.time;
+    rows.elapsed = total;
+    return rows;
+  }
+
+  /* ----- code generation ----- */
+  function n(v) { v = Number(v); if (!isFinite(v)) v = 0; return String(Math.round(v * 1000) / 1000); }
+  function ledExpr(s) { s = String(s).trim(); return /^\d+$/.test(s) ? s : JSON.stringify(s || 'LED'); }
+  function sensorNames(S) {
+    var used = {}, map = {};
+    S.sensors.forEach(function (sn) {
+      var b = String(sn.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      if (!b || /^\d/.test(b)) b = 's_' + b;
+      var nm = b, i = 2;
+      while (used[nm]) nm = b + '_' + (i++);
+      used[nm] = 1; map[sn.id] = nm;
+    });
+    return map;
+  }
+  function usage(S) {
+    var u = { sharp: false, sw: false, untilSharp: false, untilSw: false, follow: false, react: false };
+    S.sensors.forEach(function (sn) { if (sn.kind === 'sharp') u.sharp = true; else u.sw = true; });
+    if (S.mode === 'auto') return u;
+    S.steps.forEach(function (s) {
+      var sn = sensorById(S, s.sensor);
+      if (s.type === 'until' && sn) { if (sn.kind === 'sharp') u.untilSharp = true; else u.untilSw = true; }
+      if (s.type === 'follow' && sn && sn.kind === 'sharp') u.follow = true;
+    });
+    return u;
+  }
+  function sideWord(sn) {
+    if (isDown(sn)) return sn.side + ' edge, aimed down at the floor, ' + n(sn.height == null ? 4.5 : sn.height) + ' in up';
+    return { front: 'front', rear: 'rear', left: 'left side', right: 'right side' }[sn.side];
+  }
+
+  function common(S) {
+    var w = S.wiring, c = S.cal, o = [], names = sensorNames(S), u = usage(S);
+    var right = w.leftMotor === 1 ? 2 : 1, p = w.pins;
+    var defPins = p.m1f === 12 && p.m1r === 13 && p.m2f === 9 && p.m2r === 8;
+    o.push('import time', 'import machine', 'from WNE103 import KitronikPicoMotor', '');
+    o.push('# ---------- 1. MOTORS (WNE103.KitronikPicoMotor) ----------');
+    o.push('LEFT_MOTOR = ' + w.leftMotor + '      # Kitronik motor port of the LEFT wheel',
+           'RIGHT_MOTOR = ' + right + '     # Kitronik motor port of the RIGHT wheel',
+           'INVERT_LEFT = ' + (w.invL ? 'True' : 'False') + '    # True if the left wheel spins backwards on forward',
+           'INVERT_RIGHT = ' + (w.invR ? 'True' : 'False') + '   # True if the right wheel spins backwards on forward');
+    if (defPins) o.push('bot = KitronikPicoMotor()   # default pins from WNE103.py: motor 1 = GP12/GP13, motor 2 = GP9/GP8');
+    else o.push('bot = KitronikPicoMotor(',
+                '    Motor1ForwardPin=machine.Pin(' + p.m1f + '), Motor1ReversePin=machine.Pin(' + p.m1r + '),',
+                '    Motor2ForwardPin=machine.Pin(' + p.m2f + '), Motor2ReversePin=machine.Pin(' + p.m2r + '))');
+    o.push('');
+    o.push('# ---------- 2. CALIBRATION (measured on the real robot) ----------',
+           'CAL_SPEED = ' + n(c.calSpeed) + '       # % power used for the straight-line test',
+           'SPEED_IPS = ' + n(c.speedIps) + '      # inches per second measured at CAL_SPEED',
+           'TURN_SPEED = ' + n(c.turnSpeed) + '      # % power used when spinning in place',
+           'TURN_DPS = ' + n(c.turnDps) + '       # degrees per second measured at TURN_SPEED',
+           'SETTLE_MS = ' + n(c.settleMs) + '       # pause after each move so the robot stops fully',
+           'RUN_LIMIT_S = ' + n(c.runLimit) + '     # safety: stop all motors after this many seconds',
+           '');
+    o.push('# ---------- 3. SENSORS ----------');
+    if (!S.sensors.length) o.push('# No sensors attached.');
+    S.sensors.forEach(function (sn) {
+      var nm = names[sn.id], where = sideWord(sn) + (isDown(sn) ? '' : ', ' + n(sn.offset) + ' in offset');
+      if (sn.kind === 'sharp') o.push(nm + ' = machine.ADC(machine.Pin(' + sn.pin + '))   # Sharp GP2Y0A21YK0F, ' + where);
+      else {
+        var lv = sn.side === 'front' || sn.side === 'rear' ? (sn.leverDir === 'right' ? 'right' : 'left') : (sn.leverDir === 'back' ? 'backward' : 'forward');
+        o.push(nm + ' = machine.Pin(' + sn.pin + ', machine.Pin.IN, machine.Pin.' + (sn.activeLow ? 'PULL_UP' : 'PULL_DOWN') + ')   # micro switch, ' + where + ', lever ' + n(sn.lever == null ? 1.5 : sn.lever) + ' in at ' + n(sn.leverAng == null ? 30 : sn.leverAng) + ' deg pointing ' + lv + ', pressed = ' + (sn.activeLow ? '0' : '1'));
+      }
+    });
+    o.push('');
+    o.push('# ---------- HELPERS ----------',
+           'class Abort(Exception):',
+           '    pass',
+           '',
+           'T0 = 0',
+           '',
+           'def check_time():',
+           '    if time.ticks_diff(time.ticks_ms(), T0) > RUN_LIMIT_S * 1000:',
+           '        raise Abort("run limit reached")',
+           '',
+           'def _wheel(motor, pct, invert):',
+           '    """One wheel, signed % (+ = forward), through WNE103: motorOn(motor, \'f\' or \'r\', speed)."""',
+           '    if invert:',
+           '        pct = -pct',
+           '    if pct >= 0:',
+           '        bot.motorOn(motor, \'f\', pct)',
+           '    else:',
+           '        bot.motorOn(motor, \'r\', -pct)',
+           '',
+           'def drive(left, right):',
+           '    _wheel(LEFT_MOTOR, left, INVERT_LEFT)',
+           '    _wheel(RIGHT_MOTOR, right, INVERT_RIGHT)',
+           '',
+           'def stop():',
+           '    bot.motorOff(1)',
+           '    bot.motorOff(2)',
+           '',
+           'def settle():',
+           '    stop()',
+           '    time.sleep_ms(SETTLE_MS)',
+           '',
+           'def run(left, right, secs, pause=True):',
+           '    drive(left, right)',
+           '    end = time.ticks_add(time.ticks_ms(), int(secs * 1000))',
+           '    while time.ticks_diff(end, time.ticks_ms()) > 0:',
+           '        check_time()',
+           '        time.sleep_ms(5)',
+           '    if pause:',
+           '        settle()',
+           '',
+           'def forward(inches, speed=CAL_SPEED):',
+           '    run(speed, speed, inches / (SPEED_IPS * speed / CAL_SPEED))',
+           '',
+           'def backward(inches, speed=CAL_SPEED):',
+           '    run(-speed, -speed, inches / (SPEED_IPS * speed / CAL_SPEED))',
+           '',
+           'def turn_left(degrees, pause=True):',
+           '    run(-TURN_SPEED, TURN_SPEED, degrees / TURN_DPS, pause)',
+           '',
+           'def turn_right(degrees, pause=True):',
+           '    run(TURN_SPEED, -TURN_SPEED, degrees / TURN_DPS, pause)',
+           '',
+           'def curve(left, right, secs):',
+           '    run(left, right, secs)',
+           '',
+           'def wait(secs):',
+           '    run(0, 0, secs)',
+           '');
+    if (u.sharp || S.mode === 'auto' && S.sensors.some(function (x) { return x.kind === 'sharp'; })) {
+      o.push('def sharp_in(adc, samples=5):',
+             '    """Distance in inches from a Sharp GP2Y0A21YK0F (valid from about 4 in to 31 in, 99 if nothing is seen)."""',
+             '    total = 0',
+             '    for _ in range(samples):',
+             '        total += adc.read_u16()',
+             '    volts = total / samples * 3.3 / 65535',
+             '    if volts < 0.4:',
+             '        return 99.0',
+             '    return 27.86 * volts ** -1.15 / 2.54',
+             '');
+    }
+    if (u.sw) {
+      o.push('def is_pressed(pin, active_low=True):',
+             '    return pin.value() == (0 if active_low else 1)',
+             '');
+    }
+    if (S.sensors.length) {
+      o.push('def read_sensors():',
+             '    """Read every attached sensor. Sharp sensors give inches, switches give True when pressed."""',
+             '    return {');
+      S.sensors.forEach(function (sn) {
+        o.push('        "' + names[sn.id] + '": ' + (sn.kind === 'sharp' ? 'sharp_in(' + names[sn.id] + ')' : 'is_pressed(' + names[sn.id] + ', ' + (sn.activeLow ? 'True' : 'False') + ')') + ',');
+      });
+      o.push('    }', '');
+    }
+    if (u.untilSharp) {
+      o.push('def forward_until_distance(adc, stop_in, speed=CAL_SPEED, max_s=4):',
+             '    """Drive straight until the Sharp sensor reads stop_in or less (two readings in a row)."""',
+             '    drive(speed, speed)',
+             '    end = time.ticks_add(time.ticks_ms(), int(max_s * 1000))',
+             '    hits = 0',
+             '    while time.ticks_diff(end, time.ticks_ms()) > 0:',
+             '        check_time()',
+             '        hits = hits + 1 if sharp_in(adc) <= stop_in else 0',
+             '        if hits >= 2:',
+             '            break',
+             '        time.sleep_ms(10)',
+             '    settle()',
+             '');
+    }
+    if (u.untilSw) {
+      o.push('def forward_until_pressed(pin, speed=CAL_SPEED, max_s=4, active_low=True):',
+             '    """Drive straight until the switch is pressed."""',
+             '    drive(speed, speed)',
+             '    end = time.ticks_add(time.ticks_ms(), int(max_s * 1000))',
+             '    while time.ticks_diff(end, time.ticks_ms()) > 0:',
+             '        check_time()',
+             '        if is_pressed(pin, active_low):',
+             '            break',
+             '        time.sleep_ms(5)',
+             '    settle()',
+             '');
+    }
+    if (u.follow) {
+      o.push('def follow_wall(adc, side, hold_in, speed, kp, secs):',
+             '    """Keep hold_in inches from a wall on the given side ("left" or "right") using a Sharp sensor."""',
+             '    end = time.ticks_add(time.ticks_ms(), int(secs * 1000))',
+             '    while time.ticks_diff(end, time.ticks_ms()) > 0:',
+             '        check_time()',
+             '        err = max(-5, min(5, sharp_in(adc) - hold_in))   # + means too far from the wall',
+             '        steer = kp * err',
+             '        if side == "left":',
+             '            drive(speed - steer, speed + steer)',
+             '        else:',
+             '            drive(speed + steer, speed - steer)',
+             '        time.sleep_ms(20)',
+             '    settle()',
+             '');
+    }
+    return o;
+  }
+
+  function describe(S, s, names) {
+    var sn = sensorById(S, s.sensor), nm = sn ? names[sn.id] : 'no sensor';
+    switch (s.type) {
+      case 'fwd': return 'Forward ' + n(s.dist) + ' in at ' + n(s.speed) + '%';
+      case 'back': return 'Backward ' + n(s.dist) + ' in at ' + n(s.speed) + '%';
+      case 'turn': return 'Turn ' + (s.dir === 'L' ? 'left ' : 'right ') + n(s.deg) + ' deg';
+      case 'drive': return 'Curve left ' + n(s.l) + '% right ' + n(s.r) + '% for ' + n(s.sec) + ' s';
+      case 'wait': return 'Wait ' + n(s.sec) + ' s';
+      case 'until': return 'Forward until ' + nm + (sn && sn.kind === 'sharp' ? ' reads ' + n(s.stop) + ' in or less' : ' is pressed');
+      case 'follow': return 'Follow wall with ' + nm + ' at ' + n(s.hold) + ' in for ' + n(s.sec) + ' s';
+    }
+    return s.type;
+  }
+  function stepCall(S, s, names) {
+    var sn = sensorById(S, s.sensor), nm = sn ? names[sn.id] : null;
+    switch (s.type) {
+      case 'fwd': return 'forward(' + n(s.dist) + ', ' + n(s.speed) + ')';
+      case 'back': return 'backward(' + n(s.dist) + ', ' + n(s.speed) + ')';
+      case 'turn': return (s.dir === 'L' ? 'turn_left(' : 'turn_right(') + n(Math.abs(s.deg)) + ')';
+      case 'drive': return 'curve(' + n(s.l) + ', ' + n(s.r) + ', ' + n(s.sec) + ')';
+      case 'wait': return 'wait(' + n(s.sec) + ')';
+      case 'until':
+        if (!sn) return 'pass   # no sensor selected for this step';
+        return sn.kind === 'sharp' ? 'forward_until_distance(' + nm + ', ' + n(s.stop) + ', ' + n(s.speed) + ', ' + n(s.max) + ')'
+                                   : 'forward_until_pressed(' + nm + ', ' + n(s.speed) + ', ' + n(s.max) + ', ' + (sn.activeLow ? 'True' : 'False') + ')';
+      case 'follow':
+        if (!sn || sn.kind !== 'sharp' || (sn.side !== 'left' && sn.side !== 'right')) return 'pass   # needs a Sharp sensor on the left or right side';
+        return 'follow_wall(' + nm + ', "' + sn.side + '", ' + n(s.hold) + ', ' + n(s.speed) + ', ' + n(s.kp) + ', ' + n(s.sec) + ')';
+    }
+    return 'pass';
+  }
+
+  function orientCode(names, R) {
+    return ['def find_open_direction():',
+             '    """Spin once while measuring the distance ahead, then face the most open direction."""',
+             '    samples = []',
+             '    spin_ms = int(360 / TURN_DPS * 1000)',
+             '    start = time.ticks_ms()',
+             '    drive(TURN_SPEED, -TURN_SPEED)',
+             '    while time.ticks_diff(time.ticks_ms(), start) < spin_ms:',
+             '        check_time()',
+             '        samples.append((time.ticks_diff(time.ticks_ms(), start), front_distance()))',
+             '        time.sleep_ms(15)',
+             '    settle()',
+             '    n = len(samples)',
+             '    if n < 6:',
+             '        return',
+             '    avg = []',
+             '    for i in range(n):',
+             '        lo = max(0, i - 2)',
+             '        hi = min(n, i + 3)',
+             '        avg.append(sum(s[1] for s in samples[lo:hi]) / (hi - lo))',
+             '    best = max(avg)',
+             '    mid = 0',
+             '    best_len = 0',
+             '    i = 0',
+             '    while i < n:                              # longest run of readings close to the best one',
+             '        if avg[i] >= best - 1:',
+             '            j = i',
+             '            while j < n and avg[j] >= best - 1:',
+             '                j += 1',
+             '            if j - i > best_len:',
+             '                best_len = j - i',
+             '                mid = (i + j - 1) // 2',
+             '            i = j',
+             '        else:',
+             '            i += 1',
+             '    angle = samples[mid][0] / 1000 * TURN_DPS   # degrees turned to the right at that moment',
+             '    if angle > 180:',
+             '        turn_left(360 - angle)',
+             '    else:',
+             '        turn_right(angle)',
+             ''];
+  }
+  function genBump(S, names, R) {
+    var A = S.auto, o = [], useTimer = A.finish === 'timer' || !R.ds, doOrient = A.orient && !!R.fs;
+    var swL = [], swR = [];
+    S.sensors.forEach(function (x) {
+      if (x.kind !== 'switch') return;
+      if (x.side === 'left' || (x.side === 'front' && x.offset < -0.01)) swL.push(x);
+      else if (x.side === 'right' || (x.side === 'front' && x.offset > 0.01)) swR.push(x);
+      else { swL.push(x); swR.push(x); }
+    });
+    function pr(sn) { return 'is_pressed(' + names[sn.id] + ', ' + (sn.activeLow ? 'True' : 'False') + ')'; }
+    function any(l) { return l.length ? l.map(pr).join(' or ') : 'False'; }
+    o.push('# ---------- 4. STRATEGY SETTINGS (bump and steer) ----------',
+           'import random',
+           'SPEED = ' + n(A.speed) + '            # driving speed (%)',
+           'BACKUP_IN = ' + n(A.backup) + '        # after a bump, back up this far',
+           'TURN_MIN = ' + n(A.turnMin) + '          # then turn away from the bumped side by a random angle',
+           'TURN_MAX = ' + n(A.turnMax) + '          # between TURN_MIN and TURN_MAX degrees',
+           'KH = ' + n(A.kh) + '                # steer back toward the end of the track: % wheel difference per degree off',
+           'MAX_STEER = ' + n(A.maxSteer) + '         # biggest wheel speed difference used for steering (%)',
+           'JAM_BUMPS = ' + n(A.jam) + '          # this many bumps with little forward travel means the robot is stuck',
+           'ESCAPE_IN = ' + n(A.leg) + '          # when stuck, turn around and drive this far');
+    if (R.fs) o.push('AVOID_IN = ' + n(A.avoid) + '         # front Sharp sensor: turn away before touching if something is this close');
+    if (R.ds && !useTimer) o.push('FLOOR_IN = ' + n(R.ds.height == null ? 4.5 : R.ds.height) + '        # height of the down-facing Sharp sensor above the floor', 'EDGE_MARGIN_IN = ' + n(A.edgeMargin) + '   # the edge is seen when the reading is this much more than FLOOR_IN');
+    if (useTimer) o.push('STOP_AFTER_S = ' + n(A.stopAfter) + '      # no edge sensor in use: stop after this many seconds');
+    o.push('', 'heading = 0.0   # estimated heading in degrees (+ = turned right), 0 = facing the end of the track', '');
+    o.push('def turn_by(direction, degrees):',
+           '    global heading',
+           '    if direction == "R":',
+           '        turn_right(degrees)',
+           '        heading += degrees',
+           '    else:',
+           '        turn_left(degrees)',
+           '        heading -= degrees',
+           '');
+    if (R.fs) {
+      o.push('def front_distance():', '    """Nearest thing ahead, from every front-facing Sharp sensor."""',
+             '    return min(' + R.fsl.map(function (x) { return 'sharp_in(' + names[x.id] + ')'; }).join(', ') + (R.fsl.length === 1 ? ', 99.0' : '') + ')', '');
+    }
+    if (doOrient) o.push.apply(o, orientCode(names, R));
+    o.push('def bump_and_steer():',
+           '    """Drive toward the end of the track. Touch a wall, back up, turn away, try again."""',
+           '    global heading',
+           '    bumps = 0',
+           '    travel = 0.0',
+           '    ips = SPEED_IPS * SPEED / CAL_SPEED');
+    if (!useTimer) o.push('    edge_count = 0'); else o.push('    start = time.ticks_ms()');
+    o.push('    while True:',
+           '        check_time()',
+           '        hit_left = ' + any(swL),
+           '        hit_right = ' + any(swR),
+           '        front_dist = ' + (R.fs ? 'front_distance()' : '99.0   # no front Sharp sensor'));
+    if (!useTimer) o.push('        down_dist = sharp_in(' + names[R.ds.id] + ')',
+                          '        if down_dist > FLOOR_IN + EDGE_MARGIN_IN:   # the floor ends here',
+                          '            edge_count += 1',
+                          '        else:',
+                          '            edge_count = 0',
+                          '        if edge_count >= 2:',
+                          '            break');
+    else o.push('        if time.ticks_diff(time.ticks_ms(), start) > STOP_AFTER_S * 1000:', '            break');
+    o.push('        if bumps >= JAM_BUMPS:                      # stuck: back out and turn around',
+           '            backward(BACKUP_IN * 2, SPEED)',
+           '            turn_by("L" if random.random() < 0.5 else "R", 90 + random.random() * 90)',
+           '            forward(ESCAPE_IN, SPEED)',
+           '            bumps = 0',
+           '            travel = 0.0',
+           '            continue',
+           '        if hit_left or hit_right or front_dist' + (R.fs ? ' <= AVOID_IN' : ' < 0') + ':',
+           '            bumps += 1',
+           '            if hit_left or hit_right:',
+           '                backward(BACKUP_IN, SPEED)',
+           '            angle = TURN_MIN + random.random() * (TURN_MAX - TURN_MIN)',
+           '            if hit_left and not hit_right:',
+           '                turn_by("R", angle)               # bumped on the left: turn right',
+           '            elif hit_right and not hit_left:',
+           '                turn_by("L", angle)               # bumped on the right: turn left',
+           '            else:',
+           '                turn_by("L" if random.random() < 0.5 else "R", angle)',
+           '            continue',
+           '        steer = max(-MAX_STEER, min(MAX_STEER, heading * KH))   # facing right of the goal: slow the left wheel',
+           '        drive(SPEED - steer, SPEED + steer)',
+           '        heading += (-2 * steer) / (2 * TURN_SPEED) * TURN_DPS * 0.02',
+           '        travel += ips * 0.02',
+           '        if travel > 4:',
+           '            bumps = 0',
+           '            travel = 0.0',
+           '        time.sleep_ms(20)',
+           '    stop()',
+           '');
+    o.push('def route():');
+    if (doOrient) o.push('    find_open_direction()');
+    o.push('    bump_and_steer()', '');
+    return o;
+  }
+
+  /* ----- autonomous program (mirrors runAuto above) ----- */
+  function genAuto(S, names) {
+    var A = S.auto, R = autoSensors(S), left = A.hand === 'L', o = [];
+    if (A.style === 'bump') return genBump(S, names, R);
+    var useTimer = A.finish === 'timer' || !R.ds, doOrient = A.orient && !!R.fs;
+    function pr(sn) { return 'is_pressed(' + names[sn.id] + ', ' + (sn.activeLow ? 'True' : 'False') + ')'; }
+    function any(l) { return l.length ? l.map(pr).join(' or ') : 'False'; }
+    o.push('# ---------- 4. STRATEGY SETTINGS ----------',
+           'HAND = "' + (left ? 'left' : 'right') + '"          # keep the wall on this side of the robot',
+           'SPEED = ' + n(A.speed) + '            # driving speed (%)',
+           'AVOID_IN = ' + n(A.avoid) + '         # something this close ahead: turn away from the wall',
+           'CLEAR_IN = ' + n(A.clear) + '         # keep turning until the way ahead is this much farther than AVOID_IN',
+           'BACKUP_IN = ' + n(A.backup) + '        # back up this far after the front switch is pressed',
+           'TURN_DEG = ' + n(A.turnAng) + '         # turn this far after backing up');
+    if (R.hb.length) o.push('STEER = ' + n(A.steer) + '            # side switch: wheel speed difference (%) used to steer toward or away from the wall');
+    if (R.hs) o.push('HOLD_IN = ' + n(A.hold) + '          # side Sharp sensor: distance to keep from the wall', 'KP = ' + n(A.kp) + '               # side Sharp sensor: steering strength');
+    if (R.ds && !useTimer) o.push('FLOOR_IN = ' + n(R.ds.height == null ? 4.5 : R.ds.height) + '        # height of the down-facing sensor above the floor', 'EDGE_MARGIN_IN = ' + n(A.edgeMargin) + '   # the edge is seen when the reading is this much more than FLOOR_IN');
+    if (useTimer) o.push('STOP_AFTER_S = ' + n(A.stopAfter) + '      # no edge sensor in use: stop after this many seconds');
+    o.push('');
+    o.push('def turn_away(degrees, pause=True):',
+           '    if HAND == "left":',
+           '        turn_right(degrees, pause)',
+           '    else:',
+           '        turn_left(degrees, pause)',
+           '');
+    if (R.fs) {
+      o.push('def front_distance():', '    """Nearest thing ahead, from every front-facing Sharp sensor."""', '    return min(' + R.fsl.map(function (x) { return 'sharp_in(' + names[x.id] + ')'; }).join(', ') + (R.fsl.length === 1 ? ', 99.0' : '') + ')', '');
+      o.push('def turn_until_clear():',
+             '    """Pivot away from the wall until the way ahead is clear."""',
+             '    turned = 0',
+             '    while turned < 360:',
+             '        check_time()',
+             '        if front_distance() > AVOID_IN + CLEAR_IN:',
+             '            break',
+             '        turn_away(10, False)',
+             '        turned += 10',
+             '    settle()',
+             '');
+    }
+    if (doOrient) {
+      o.push('def find_open_direction():',
+             '    """Spin once while measuring the distance ahead, then face the most open direction."""',
+             '    samples = []',
+             '    spin_ms = int(360 / TURN_DPS * 1000)',
+             '    start = time.ticks_ms()',
+             '    drive(TURN_SPEED, -TURN_SPEED)',
+             '    while time.ticks_diff(time.ticks_ms(), start) < spin_ms:',
+             '        check_time()',
+             '        samples.append((time.ticks_diff(time.ticks_ms(), start), front_distance()))',
+             '        time.sleep_ms(15)',
+             '    settle()',
+             '    n = len(samples)',
+             '    if n < 6:',
+             '        return',
+             '    avg = []',
+             '    for i in range(n):',
+             '        lo = max(0, i - 2)',
+             '        hi = min(n, i + 3)',
+             '        avg.append(sum(s[1] for s in samples[lo:hi]) / (hi - lo))',
+             '    best = max(avg)',
+             '    mid = 0',
+             '    best_len = 0',
+             '    i = 0',
+             '    while i < n:                              # longest run of readings close to the best one',
+             '        if avg[i] >= best - 1:',
+             '            j = i',
+             '            while j < n and avg[j] >= best - 1:',
+             '                j += 1',
+             '            if j - i > best_len:',
+             '                best_len = j - i',
+             '                mid = (i + j - 1) // 2',
+             '            i = j',
+             '        else:',
+             '            i += 1',
+             '    angle = samples[mid][0] / 1000 * TURN_DPS   # degrees turned to the right at that moment',
+             '    if angle > 180:',
+             '        turn_left(360 - angle)',
+             '    else:',
+             '        turn_right(angle)',
+             '');
+    }
+    o.push('def follow_wall():',
+           '    """Drive along the wall on the ' + (left ? 'left' : 'right') + ', go around obstacles' + (useTimer ? ', and stop after STOP_AFTER_S.' : ', and stop at the edge of the track.') + '"""');
+    if (!useTimer) o.push('    edge_count = 0');
+    else o.push('    start = time.ticks_ms()');
+    o.push('    while True:',
+           '        check_time()',
+           '        # --- read the sensors ---',
+           '        front_dist = ' + (R.fs ? 'front_distance()' : '99.0') + (R.fs ? '' : '   # no front Sharp sensor'),
+           '        front_hit = ' + any(R.fb),
+           '        wall_hit = ' + any(R.hb));
+    if (R.hs) o.push('        wall_dist = sharp_in(' + names[R.hs.id] + ')');
+    if (R.ds && !useTimer) o.push('        down_dist = sharp_in(' + names[R.ds.id] + ')');
+    o.push('        # --- finish ---');
+    if (!useTimer) o.push('        if down_dist > FLOOR_IN + EDGE_MARGIN_IN:   # the floor ends here',
+                          '            edge_count += 1',
+                          '        else:',
+                          '            edge_count = 0',
+                          '        if edge_count >= 2:',
+                          '            break');
+    else o.push('        if time.ticks_diff(time.ticks_ms(), start) > STOP_AFTER_S * 1000:',
+                '            break');
+    o.push('        # --- obstacles ---',
+           '        if front_hit:',
+           '            backward(BACKUP_IN, SPEED)',
+           '            turn_away(TURN_DEG)',
+           '            continue');
+    if (R.fs) o.push('        if front_dist <= AVOID_IN:',
+                     '            turn_until_clear()',
+                     '            continue');
+    o.push('        # --- wall tracking (steer > 0 turns left) ---');
+    if (R.hb.length && R.hs) o.push('        steer = -STEER if wall_hit else KP * max(-5, min(5, wall_dist - HOLD_IN))');
+    else if (R.hb.length) o.push('        steer = -STEER if wall_hit else STEER');
+    else if (R.hs) o.push('        steer = KP * max(-5, min(5, wall_dist - HOLD_IN))');
+    else o.push('        steer = 0   # no sensor on the wall side: drive straight');
+    if (!left) o.push('        steer = -steer             # wall on the right: mirror the steering');
+    o.push('        drive(SPEED - steer, SPEED + steer)',
+           '        time.sleep_ms(20)',
+           '    stop()',
+           '');
+    o.push('def route():');
+    if (doOrient) o.push('    find_open_direction()');
+    o.push('    follow_wall()', '');
+    return o;
+  }
+
+  function genMain(S, sim) {
+    var w = S.wiring, o = [], names = sensorNames(S), est = sim ? sim.time : 0, auto = S.mode === 'auto';
+    var sl = S.sensors.length ? S.sensors.map(function (sn) { return names[sn.id] + ' (' + (sn.kind === 'sharp' ? (isDown(sn) ? 'Sharp IR, down' : 'Sharp IR') : 'micro switch') + ', GP' + sn.pin + ')'; }).join(', ') : 'none';
+    o.push('# ====================================================================',
+           '#  ENGR 103 - Design Project 2: Maze Bot (AutoBot)',
+           '#  Raspberry Pi Pico 2 W + Kitronik 5331 motor driver',
+           '#  Needs WNE103.py saved on the Pico next to this file.',
+           '#  Sensors: ' + sl,
+           auto ? '#  Strategy: works from any starting heading (' + (S.auto.orient && S.sensors.some(function (x) { return x.kind === 'sharp' && !isDown(x) && x.side === 'front'; }) ? 'spin to find the open direction, then ' : '') + (S.auto.style === 'bump' ? 'bump, back up, turn away and steer toward the end).' : 'follow the ' + (S.auto.hand === 'L' ? 'left' : 'right') + ' wall).')
+                : '#  Route: ' + S.steps.length + ' timed step' + (S.steps.length === 1 ? '' : 's') + ' (the robot must start at the planned heading).',
+           '#  Generated by the Maze Bot Code Generator.',
+           '# ====================================================================');
+    o.push.apply(o, common(S));
+    if (auto) o.push.apply(o, genAuto(S, names));
+    else {
+      o.push('# ---------- ROUTE ----------', 'def route():');
+      if (!S.steps.length) o.push('    pass');
+      S.steps.forEach(function (s, i) {
+        o.push('    # ' + (i + 1) + '. ' + describe(S, s, names));
+        o.push('    ' + stepCall(S, s, names));
+      });
+      o.push('');
+    }
+    o.push('# ---------- LED AND START ----------',
+           'led = machine.Pin(' + ledExpr(w.led) + ', machine.Pin.OUT)');
+    if (w.startMode === 'button') o.push('BUTTON = machine.Pin(' + w.button + ', machine.Pin.IN, machine.Pin.PULL_UP)   # button between this pin and GND');
+    else o.push('START_DELAY_S = ' + n(w.delay) + '       # time to load the rescued individuals before the robot moves');
+    o.push('', '# ---------- MAIN ----------', 'def main():', '    global T0', '    led.off()');
+    if (S.sensors.length) o.push('    print("Sensor check:", read_sensors())');
+    if (w.startMode === 'button') o.push('    print("Load the rescued individuals, then press the button.")', '    while BUTTON.value() == 1:', '        time.sleep_ms(10)');
+    else o.push('    print("Starting in", START_DELAY_S, "s")', '    time.sleep(START_DELAY_S)');
+    o.push('    T0 = time.ticks_ms()',
+           '    try:',
+           '        route()',
+           '        stop()',
+           '        led.on()',
+           '        print("Route finished in %.1f s" % (time.ticks_diff(time.ticks_ms(), T0) / 1000))',
+           '    except Abort as e:',
+           '        print("Stopped:", e)',
+           '    finally:',
+           '        stop()',
+           '',
+           'main()');
+    return o.join('\n') + '\n';
+  }
+
+  function genCal(S) {
+    var o = [], names = sensorNames(S), tests = ['WHEELS', 'STRAIGHT', 'SPIN'];
+    if (S.sensors.length) tests.push('SENSORS');
+    o.push('# ====================================================================',
+           '#  CALIBRATION - run each test, measure, then type the numbers into',
+           '#  the Maze Bot Code Generator (Calibration section).',
+           '# ====================================================================');
+    var cs = { wiring: S.wiring, cal: S.cal, sensors: S.sensors, robot: S.robot, mode: 'auto', steps: [], auto: S.auto };
+    o.push.apply(o, common(cs));
+    o.push('TEST = "WHEELS"   # run again with ' + tests.slice(1).map(function (t) { return '"' + t + '"'; }).join(', then '),
+           '',
+           'def main():',
+           '    global T0',
+           '    T0 = time.ticks_ms()',
+           '    print("Put the robot on the floor. Starting in 3 s")',
+           '    time.sleep(3)',
+           '    try:',
+           '        if TEST == "WHEELS":',
+           '            print("LEFT wheel only (1 s): the robot should swing to the RIGHT.")',
+           '            run(CAL_SPEED, 0, 1.0)',
+           '            time.sleep(1)',
+           '            print("RIGHT wheel only (1 s): the robot should swing to the LEFT.")',
+           '            run(0, CAL_SPEED, 1.0)',
+           '            print("Wrong direction or a wheel going backwards? Change the Reverse boxes or the left motor port on the web page.")',
+           '        elif TEST == "STRAIGHT":',
+           '            print("Driving 2 s at", CAL_SPEED, "%. Measure the distance in inches.")',
+           '            print("SPEED_IPS = distance / 2")',
+           '            run(CAL_SPEED, CAL_SPEED, 2.0)',
+           '        elif TEST == "SPIN":',
+           '            print("Spinning right for 2 s at", TURN_SPEED, "%. Mark the start heading, then measure the angle turned.")',
+           '            print("TURN_DPS = degrees turned / 2")',
+           '            run(TURN_SPEED, -TURN_SPEED, 2.0)');
+    if (S.sensors.length) {
+      o.push('        elif TEST == "SENSORS":',
+             '            print("Move your hand or a wall near each sensor. Aim the down sensor at the floor, then past the edge of a table. Press Stop in Thonny to end.")',
+             '            for _ in range(60):',
+             '                line = ""');
+      S.sensors.forEach(function (sn) {
+        var nm = names[sn.id];
+        if (sn.kind === 'sharp') o.push('                line += "' + nm + ' %.1f in   " % sharp_in(' + nm + ')');
+        else o.push('                line += "' + nm + ' " + ("PRESSED   " if is_pressed(' + nm + ', ' + (sn.activeLow ? 'True' : 'False') + ') else "open      ")');
+      });
+      o.push('                print(line)', '                time.sleep_ms(300)');
+    }
+    o.push('    except Abort as e:',
+           '        print("Stopped:", e)',
+           '    finally:',
+           '        stop()',
+           '',
+           'main()');
+    return o.join('\n') + '\n';
+  }
+
+  return { COURSE: COURSE, STEP_TYPES: STEP_TYPES, simulate: simulate, trial: trial, poseAt: poseAt, polyOf: polyOf, scoreOf: scoreOf,
+           genMain: genMain, genCal: genCal, usage: usage, collides: collides, classify: classify, autoSensors: autoSensors,
+           sensorGeom: sensorGeom, sensorDist: sensorDist, leverSeg: leverSeg, leverHit: leverHit, sharpIn: sharpIn, isDown: isDown };
+})();
+
+</script>
+
+<script id="ui">
+(function () {
+  'use strict';
+  var C = MB.COURSE, ST = MB.STEP_TYPES;
+  var $ = function (id) { return document.getElementById(id); };
+  var uid = 1;
+
+  function mk(type, over) {
+    var o = { id: uid++, type: type };
+    ST[type].fields.forEach(function (x) { o[x[0]] = x[2]; });
+    if (over) for (var k in over) o[k] = over[k];
+    return o;
+  }
+  function newSensor(kind, side, offset, pin, over) {
+    var o = { id: uid++, kind: kind, name: (kind === 'sharp' ? 'ir_' : 'bump_') + side, side: side, offset: offset, pin: pin, activeLow: true };
+    if (kind === 'sharp') { o.aim = 'out'; o.height = 4.5; }
+    else { o.lever = 1.5; o.leverAng = 30; o.leverDir = (side === 'front' || side === 'rear') ? 'right' : 'back'; }
+    if (over) for (var k in over) o[k] = over[k];
+    return o;
+  }
+  /* Route found by searching the course for a collision-free path (5.5 x 4.5 in robot, start x 8 y 27.9, 0.8 in of clearance). */
+  function presetDead() {
+    return [mk('fwd', { dist: 18.5 }), mk('turn', { dir: 'L', deg: 25 }), mk('fwd', { dist: 16.5 }), mk('turn', { dir: 'R', deg: 30 }),
+            mk('fwd', { dist: 6 }), mk('turn', { dir: 'R', deg: 55 }), mk('fwd', { dist: 6 }), mk('turn', { dir: 'L', deg: 60 }),
+            mk('fwd', { dist: 27.5 })];
+  }
+  function defaults() {
+    return {
+      robot: { L: 5.5, W: 4.5 },
+      start: { x: 6, y: 24, deg: 0 },
+      wiring: { leftMotor: 1, invL: false, invR: false, pins: { m1f: 12, m1r: 13, m2f: 9, m2r: 8 }, led: 'LED', startMode: 'delay', delay: 5, button: 20 },
+      cal: { calSpeed: 60, speedIps: 10, turnSpeed: 50, turnDps: 200, settleMs: 100, runLimit: 115 },
+      score: { a: 50, t0: 30, k: 0.008, unload: 3, cargo: true },
+      sensors: [],
+      steps: presetDead(),
+      mode: 'auto', track: 'bottom', course: { end: 'edge' },
+      auto: { style: 'bump', hand: 'R', orient: true, finish: 'edge', stopAfter: 60, edgeMargin: 3, speed: 58, backup: 1.5, avoid: 6.3,
+              turnMin: 22, turnMax: 55, kh: 0.6, maxSteer: 24, jam: 8, leg: 6.5, turnAng: 40, steer: 12, clear: 3, hold: 3.5, kp: 4, seed: 1 }
+    };
+  }
+  var S = defaults();
+  var KEY = 'mazebot.v4', sel = null;
+  function merge(dst, src) {
+    for (var k in src) {
+      if (k === 'steps' || k === 'sensors') continue;
+      if (src[k] && typeof src[k] === 'object' && dst[k] && typeof dst[k] === 'object') merge(dst[k], src[k]);
+      else if (typeof src[k] === typeof dst[k]) dst[k] = src[k];
+    }
+  }
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved) {
+      merge(S, saved);
+      if (Array.isArray(saved.sensors)) S.sensors = saved.sensors.filter(function (s) { return s && (s.kind === 'sharp' || s.kind === 'switch'); })
+        .map(function (s) { return newSensor(s.kind, s.side || 'front', Number(s.offset) || 0, Number(s.pin) || 0, s); });
+      if (Array.isArray(saved.steps)) {
+        var idMap = {};
+        (saved.sensors || []).forEach(function (old, i) { if (S.sensors[i]) idMap[old.id] = S.sensors[i].id; });
+        S.steps = saved.steps.filter(function (s) { return s && ST[s.type]; }).map(function (s) {
+          var o = mk(s.type, s); if (s.sensor != null) o.sensor = idMap[s.sensor] != null ? idMap[s.sensor] : null; return o;
+        });
+      }
+    }
+  } catch (e) { /* storage unavailable */ }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
+
+  function getPath(o, p) { var a = p.split('.'); for (var i = 0; i < a.length; i++) o = o[a[i]]; return o; }
+  function setPath(o, p, v) { var a = p.split('.'); for (var i = 0; i < a.length - 1; i++) o = o[a[i]]; o[a[a.length - 1]] = v; }
+  function num(v, d) { var x = parseFloat(v); return isFinite(x) ? x : d; }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+  function sensorOf(id) { for (var i = 0; i < S.sensors.length; i++) if (S.sensors[i].id === id) return S.sensors[i]; return null; }
+  function firstSensor(needs) {
+    for (var i = 0; i < S.sensors.length; i++) if (needs !== 'sharp' || S.sensors[i].kind === 'sharp') return S.sensors[i].id;
+    return null;
+  }
+
+  /* ---- bind setup inputs ---- */
+  var bound = document.querySelectorAll('[data-path]');
+  Array.prototype.forEach.call(bound, function (el) {
+    var h = function () {
+      var cur = getPath(S, el.dataset.path), nv;
+      if (el.type === 'checkbox') nv = el.checked;
+      else if (el.type === 'number') nv = num(el.value, cur);
+      else if (el.dataset.type === 'int') nv = parseInt(el.value, 10);
+      else nv = el.value;
+      setPath(S, el.dataset.path, nv); refresh();
+    };
+    el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', h);
+  });
+  function syncInputs() {
+    Array.prototype.forEach.call(bound, function (el) {
+      var v = getPath(S, el.dataset.path); if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
+    });
+  }
+  syncInputs();
+
+  /* ---- sensors UI ---- */
+  var sensEl = $('sensors'), rbt = $('rbt');
+  function opt(v, label, cur) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + label + '</option>'; }
+  function renderSensors() {
+    sensEl.innerHTML = '';
+    if (!S.sensors.length) {
+      var e = document.createElement('p'); e.className = 'note'; e.textContent = 'No sensors attached. Without sensors the robot cannot find a path from a random start. Load a kit below, or add sensors one at a time.'; sensEl.appendChild(e);
+    }
+    S.sensors.forEach(function (sn, i) {
+      var d = document.createElement('div'); d.className = 'sensor' + (sn.id === sel ? ' sel' : ''); d.dataset.i = i;
+      var p = 'sn' + sn.id + '-', isS = sn.kind === 'sharp', down = MB.isDown(sn);
+      var sides = ['front', 'left', 'right', 'rear'].map(function (s) { return opt(s, s.charAt(0).toUpperCase() + s.slice(1), sn.side); }).join('');
+      var fb = sn.side === 'front' || sn.side === 'rear';
+      var extra;
+      if (isS) extra =
+        '<label>Aims<select id="' + p + 'aim" data-k="aim">' + opt('out', 'Out, at walls', sn.aim) + opt('down', 'Down, at the floor (edge)', sn.aim) + '</select></label>' +
+        (down ? '<label>Height above floor (in)<input class="num" type="number" step="0.1" min="0.5" id="' + p + 'h" data-k="height" value="' + esc(sn.height) + '"></label>' : '');
+      else extra =
+        '<label>Lever length (in)<input class="num" type="number" step="0.1" min="0.3" id="' + p + 'lev" data-k="lever" value="' + esc(sn.lever) + '"></label>' +
+        '<label>Lever angle to surface (&deg;)<input class="num" type="number" step="1" min="0" max="80" id="' + p + 'ang" data-k="leverAng" value="' + esc(sn.leverAng) + '"></label>' +
+        '<label>Lever points<select id="' + p + 'dir" data-k="leverDir">' + (fb ? opt('left', 'Left', sn.leverDir) + opt('right', 'Right', sn.leverDir) : opt('forward', 'Forward', sn.leverDir) + opt('back', 'Back', sn.leverDir)) + '</select></label>' +
+        '<label>Pressed reads<select id="' + p + 'act" data-k="activeLow">' + opt('1', '0 (wired to GND)', sn.activeLow ? '1' : '0') + opt('0', '1 (wired to 3.3 V)', sn.activeLow ? '1' : '0') + '</select></label>';
+      d.innerHTML =
+        '<div class="shead"><span class="stype ' + (isS ? 'sh' : 'sw') + '">' + (isS ? (down ? 'Sharp IR, down' : 'Sharp IR') : '3-way switch') + '</span>' +
+        '<input type="text" id="' + p + 'name" data-k="name" value="' + esc(sn.name) + '" aria-label="Sensor name">' +
+        '<button type="button" class="btn small" data-act="sel">Place</button>' +
+        '<button type="button" class="btn small" data-act="del" aria-label="Remove sensor">✕</button></div>' +
+        '<div class="fields">' +
+        '<label>Mounted on<select id="' + p + 'side" data-k="side">' + sides + '</select></label>' +
+        '<label>Offset (in)<input class="num" type="number" step="0.1" id="' + p + 'off" data-k="offset" value="' + esc(sn.offset) + '"></label>' +
+        '<label>' + (isS ? 'ADC pin (GP26 to 28)' : 'Input pin (GP)') + '<input class="num" type="number" id="' + p + 'pin" data-k="pin" value="' + esc(sn.pin) + '"></label>' +
+        extra + '</div>';
+      sensEl.appendChild(d);
+    });
+  }
+  function sIdx(el) { var d = el.closest('.sensor'); return d ? parseInt(d.dataset.i, 10) : -1; }
+  sensEl.addEventListener('input', function (e) {
+    var k = e.target.dataset.k, i = sIdx(e.target); if (!k || i < 0) return;
+    var sn = S.sensors[i];
+    if (k === 'name') { sn.name = e.target.value; renderSteps(); }
+    else if (e.target.type === 'number') sn[k] = num(e.target.value, sn[k]);
+    refresh();
+  });
+  sensEl.addEventListener('change', function (e) {
+    var k = e.target.dataset.k, i = sIdx(e.target); if (!k || i < 0) return;
+    var sn = S.sensors[i];
+    if (k === 'side') { sn.side = e.target.value; if (sn.kind === 'switch') sn.leverDir = (sn.side === 'front' || sn.side === 'rear') ? 'right' : 'back'; }
+    else if (k === 'activeLow') sn.activeLow = e.target.value === '1';
+    else if (k === 'aim' || k === 'leverDir') sn[k] = e.target.value;
+    else return;
+    renderSensors(); renderSteps(); refresh();
+  });
+  sensEl.addEventListener('click', function (e) {
+    var i = sIdx(e.target); if (i < 0) return;
+    var b = e.target.closest('button[data-act]');
+    if (b && b.dataset.act === 'del') { S.sensors.splice(i, 1); S.steps.forEach(function (s) { if (s.sensor != null && !sensorOf(s.sensor)) s.sensor = null; }); renderSensors(); renderSteps(); refresh(); return; }
+    sel = S.sensors[i].id; renderSensors(); refresh();
+  });
+  function addSensor(kind) {
+    var sn = newSensor(kind, 'front', 0, kind === 'sharp' ? 26 : 14);
+    var same = S.sensors.filter(function (x) { return x.kind === kind; }).length;
+    if (same) { sn.side = ['left', 'right', 'rear'][(same - 1) % 3]; sn.name = (kind === 'sharp' ? 'ir_' : 'bump_') + sn.side; sn.pin = (kind === 'sharp' ? 26 : 14) + same; if (kind === 'sharp' && sn.pin > 28) sn.pin = 28; }
+    var cnt = S.sensors.filter(function (x) { return x.side === sn.side; }).length;
+    if (cnt) sn.offset = (cnt % 2 ? 1 : -1) * 1.2 * Math.ceil(cnt / 2);
+    S.sensors.push(sn); sel = sn.id; renderSensors(); renderSteps(); refresh();
+  }
+  function kit(withSharps) {
+    var L = S.robot.L, W = S.robot.W, hw = W / 2, hl = L / 2;
+    S.sensors = [
+      newSensor('switch', 'front', -hw, 14, { name: 'bump_fl', leverDir: 'right', lever: hw }),
+      newSensor('switch', 'front', hw, 15, { name: 'bump_fr', leverDir: 'left', lever: hw }),
+      newSensor('switch', 'left', hl, 16, { name: 'bump_left', leverDir: 'back', lever: L }),
+      newSensor('switch', 'right', hl, 17, { name: 'bump_right', leverDir: 'back', lever: L })
+    ];
+    if (withSharps) S.sensors.push(
+      newSensor('sharp', 'front', -1.9, 26, { name: 'ir_front_l' }), newSensor('sharp', 'front', 1.9, 27, { name: 'ir_front_r' }),
+      newSensor('sharp', 'front', 0, 28, { name: 'ir_edge', aim: 'down', height: 4.5 }));
+    S.auto.finish = withSharps ? 'edge' : 'timer';
+    sel = S.sensors[0].id; syncInputs(); renderSensors(); renderSteps(); refresh();
+  }
+  $('kit-a').addEventListener('click', function () { kit(false); });
+  $('kit-b').addEventListener('click', function () { kit(true); });
+  $('add-sharp').addEventListener('click', function () { addSensor('sharp'); });
+  $('add-switch').addEventListener('click', function () { addSensor('switch'); });
+
+  /* robot diagram: robot faces right, left wheel on top */
+  function drawDiagram() {
+    var L = S.robot.L, W = S.robot.W, mx = 7, my = 5, h = '';
+    rbt.setAttribute('viewBox', (-L / 2 - mx) + ' ' + (-W / 2 - my) + ' ' + (L + 2 * mx) + ' ' + (W + 2 * my));
+    h += '<rect class="rb-body" x="' + (-L / 2) + '" y="' + (-W / 2) + '" width="' + L + '" height="' + W + '" rx=".3"/>';
+    h += '<rect class="rb-wheel" x="-1.2" y="' + (-W / 2 - .45) + '" width="2.4" height=".9" rx=".2"/><rect class="rb-wheel" x="-1.2" y="' + (W / 2 - .45) + '" width="2.4" height=".9" rx=".2"/>';
+    h += '<text class="rb-t" x="0" y="' + (-W / 2 + 1.2) + '" text-anchor="middle" style="font-size:.6px">left wheel</text><text class="rb-t" x="0" y="' + (W / 2 - .6) + '" text-anchor="middle" style="font-size:.6px">right wheel</text>';
+    h += '<path class="rb-arrow" d="M ' + (L / 2 - 1.6) + ' 0 L ' + (L / 2 - .4) + ' 0 M ' + (L / 2 - .9) + ' -.5 L ' + (L / 2 - .4) + ' 0 L ' + (L / 2 - .9) + ' .5"/>';
+    var p0 = { x: 0, y: 0, th: 0 };
+    S.sensors.forEach(function (sn) {
+      var g = MB.sensorGeom(S, sn, p0), isS = sn.kind === 'sharp', down = MB.isDown(sn), len = isS ? 3.5 : 0.5;
+      var ex = g.x + g.dx * len, ey = g.y + g.dy * len;
+      if (isS && !down) h += '<line class="rb-beam" x1="' + g.x.toFixed(2) + '" y1="' + g.y.toFixed(2) + '" x2="' + ex.toFixed(2) + '" y2="' + ey.toFixed(2) + '"/>';
+      if (isS && down) h += '<circle class="rb-beam" cx="' + g.x.toFixed(2) + '" cy="' + g.y.toFixed(2) + '" r=".75" fill="none"/>';
+      if (!isS) { var lv = MB.leverSeg(S, sn, p0); ex = lv.x2; ey = lv.y2; h += '<line class="rb-whisk" style="stroke-width:.28" x1="' + lv.x1.toFixed(2) + '" y1="' + lv.y1.toFixed(2) + '" x2="' + lv.x2.toFixed(2) + '" y2="' + lv.y2.toFixed(2) + '"/>'; }
+      h += '<rect class="' + (isS ? 'smark-sharp' : 'smark-sw') + (sn.id === sel ? ' selm' : '') + '" x="' + (g.x - .4).toFixed(2) + '" y="' + (g.y - .4).toFixed(2) + '" width=".8" height=".8" rx=".15"/>';
+      var tx = g.x, ty = g.y, anchor = 'middle';
+      if (sn.side === 'front') { tx = ex + .4; ty = ey + .28; anchor = 'start'; }
+      else if (sn.side === 'rear') { tx = ex - .4; ty = ey + .28; anchor = 'end'; }
+      else if (sn.side === 'left') { tx = g.x; ty = g.y - 1.1; }
+      else { tx = g.x; ty = g.y + 1.9; }
+      h += '<text class="rb-t b" x="' + tx.toFixed(2) + '" y="' + ty.toFixed(2) + '" text-anchor="' + anchor + '">' + esc(sn.name) + (down ? ' (down)' : '') + '</text>';
+    });
+    rbt.innerHTML = h;
+  }
+  rbt.addEventListener('click', function (e) {
+    var sn = sensorOf(sel); if (!sn) return;
+    var pt = rbt.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    var q = pt.matrixTransform(rbt.getScreenCTM().inverse()), L = S.robot.L, W = S.robot.W;
+    var d = { front: Math.abs(q.x - L / 2), rear: Math.abs(q.x + L / 2), left: Math.abs(q.y + W / 2), right: Math.abs(q.y - W / 2) }, best = 'front';
+    Object.keys(d).forEach(function (k) { if (d[k] < d[best]) best = k; });
+    sn.side = best;
+    var half = (best === 'front' || best === 'rear') ? W / 2 : L / 2;
+    sn.offset = Math.round(Math.max(-half, Math.min(half, (best === 'front' || best === 'rear') ? q.y : q.x)) * 10) / 10;
+    renderSensors(); renderSteps(); refresh();
+  });
+
+  /* ---- steps UI ---- */
+  var stepsEl = $('steps'), addSel = $('add-type'), hl = -1, sim = null;
+  Object.keys(ST).forEach(function (k) {
+    var o = document.createElement('option'); o.value = k; o.textContent = ST[k].label; addSel.appendChild(o);
+  });
+  function renderSteps() {
+    stepsEl.innerHTML = '';
+    S.steps.forEach(function (s, i) {
+      var li = document.createElement('li'); li.className = 'step'; li.dataset.i = i;
+      var opts = Object.keys(ST).map(function (k) { return '<option value="' + k + '"' + (k === s.type ? ' selected' : '') + '>' + esc(ST[k].label) + '</option>'; }).join('');
+      var cur = sensorOf(s.sensor);
+      var fields = ST[s.type].fields.map(function (f) {
+        var id = 'st' + s.id + '-' + f[0];
+        if (f[0] === 'dir') return '<label>' + f[1] + '<select id="' + id + '" data-k="dir"><option value="L"' + (s.dir === 'L' ? ' selected' : '') + '>Left</option><option value="R"' + (s.dir === 'R' ? ' selected' : '') + '>Right</option></select></label>';
+        if (f[0] === 'sensor') {
+          var list = S.sensors.filter(function (x) { return ST[s.type].needs !== 'sharp' || x.kind === 'sharp'; });
+          var o2 = list.length ? list.map(function (x) { return '<option value="' + x.id + '"' + (x.id === s.sensor ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') : '<option value="">(add a sensor first)</option>';
+          if (list.length && !list.some(function (x) { return x.id === s.sensor; })) o2 = '<option value="" selected>Choose a sensor</option>' + o2;
+          return '<label>' + f[1] + '<select id="' + id + '" data-k="sensor">' + o2 + '</select></label>';
+        }
+        if (f[0] === 'stop' && cur && cur.kind === 'switch') return '';
+        return '<label>' + f[1] + '<input class="num" type="number" step="any" id="' + id + '" data-k="' + f[0] + '" value="' + esc(s[f[0]]) + '"></label>';
+      }).join('');
+      li.innerHTML =
+        '<div class="step-head"><span class="idx">' + (i + 1) + '</span>' +
+        '<select id="st' + s.id + '-type" data-k="type" aria-label="Step ' + (i + 1) + ' type">' + opts + '</select>' +
+        '<span class="dur" data-role="dur"></span><span class="badge" data-role="bad" hidden></span>' +
+        '<span class="tools"><button type="button" data-act="up" aria-label="Move step up">↑</button>' +
+        '<button type="button" data-act="down" aria-label="Move step down">↓</button>' +
+        '<button type="button" data-act="del" aria-label="Delete step">✕</button></span></div>' +
+        '<div class="fields">' + fields + '</div>';
+      stepsEl.appendChild(li);
+    });
+    if (!S.steps.length) {
+      var e = document.createElement('li'); e.className = 'note'; e.textContent = 'No steps yet. Add one below, or start from a preset.'; stepsEl.appendChild(e);
+    }
+    if (sim) drawStepInfo();
+  }
+  function stepIndex(el) { var li = el.closest('.step'); return li ? parseInt(li.dataset.i, 10) : -1; }
+  stepsEl.addEventListener('input', function (e) {
+    var k = e.target.dataset.k, i = stepIndex(e.target);
+    if (!k || i < 0 || k === 'type' || k === 'sensor' || k === 'dir') return;
+    S.steps[i][k] = num(e.target.value, S.steps[i][k]); refresh();
+  });
+  stepsEl.addEventListener('change', function (e) {
+    var i = stepIndex(e.target), k = e.target.dataset.k; if (i < 0) return;
+    if (k === 'type') {
+      var old = S.steps[i], ns = mk(e.target.value); ns.id = old.id;
+      if (ST[ns.type].needs) ns.sensor = firstSensor(ST[ns.type].needs);
+      S.steps[i] = ns; renderSteps(); refresh();
+    } else if (k === 'dir') { S.steps[i].dir = e.target.value; refresh(); }
+    else if (k === 'sensor') { S.steps[i].sensor = e.target.value === '' ? null : parseInt(e.target.value, 10); renderSteps(); refresh(); }
+  });
+  stepsEl.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-act]'); if (!b) return;
+    var i = stepIndex(b), a = b.dataset.act;
+    if (a === 'del') S.steps.splice(i, 1);
+    else if (a === 'up' && i > 0) { var t = S.steps[i]; S.steps[i] = S.steps[i - 1]; S.steps[i - 1] = t; }
+    else if (a === 'down' && i < S.steps.length - 1) { var t2 = S.steps[i]; S.steps[i] = S.steps[i + 1]; S.steps[i + 1] = t2; }
+    renderSteps(); refresh();
+  });
+  function setHl(i) { if (i !== hl) { hl = i; drawMap(); markHl(); } }
+  stepsEl.addEventListener('mouseover', function (e) { setHl(stepIndex(e.target)); });
+  stepsEl.addEventListener('mouseleave', function () { setHl(-1); });
+  stepsEl.addEventListener('focusin', function (e) { setHl(stepIndex(e.target)); });
+  function markHl() { Array.prototype.forEach.call(stepsEl.children, function (li, i) { li.classList.toggle('hl', i === hl); }); }
+  $('add-btn').addEventListener('click', function () {
+    var s = mk(addSel.value); if (ST[s.type].needs) s.sensor = firstSensor(ST[s.type].needs);
+    S.steps.push(s); renderSteps(); refresh();
+  });
+
+  function applyPreset(p) {
+    S.mode = 'steps'; S.start = { x: 8, y: 27.9, deg: 0 }; S.sensors = []; sel = null; S.track = 'bottom';
+    if (p === 'blank') S.steps = [];
+    else {
+      S.steps = presetDead();
+      if (p === 'sharp') {
+        S.sensors = [newSensor('sharp', 'front', 0, 26)];
+        S.steps.pop(); S.steps.push(mk('until', { sensor: S.sensors[0].id, stop: 4.5, speed: 60, max: 4 }));
+      } else if (p === 'bump') {
+        S.sensors = [newSensor('switch', 'front', 0, 14)];
+        S.steps.pop(); S.steps.push(mk('until', { sensor: S.sensors[0].id, speed: 40, max: 6 }));
+      }
+      if (S.sensors.length) sel = S.sensors[0].id;
+    }
+    syncInputs(); renderSensors(); renderSteps(); refresh();
+  }
+  function setMode(m) {
+    if (S.mode === m) return;
+    S.mode = m;
+    S.start = m === 'auto' ? { x: 6, y: 24, deg: 0 } : { x: 8, y: 27.9, deg: 0 };
+    syncInputs(); renderSteps(); refresh();
+  }
+  document.querySelectorAll('[data-mode]').forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
+  document.querySelectorAll('[data-preset]').forEach(function (b) { b.addEventListener('click', function () { applyPreset(b.dataset.preset); }); });
+
+  /* ---- map ---- */
+  var mapEl = $('map'), scrub = $('scrub'), scrubT = $('scrub-t'), playBtn = $('play'), anim = null;
+  function f1(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+  function polyPts(p) { return p.map(function (q) { return q[0].toFixed(2) + ',' + q[1].toFixed(2); }).join(' '); }
+  function robotSvg(pose, cls) {
+    var pts = MB.polyOf(pose, S.robot.L, S.robot.W);
+    var cx = (pts[0][0] + pts[1][0]) / 2, cy = (pts[0][1] + pts[1][1]) / 2;
+    return '<polygon class="' + cls + '" points="' + polyPts(pts) + '"/>' +
+      (cls === 'robot' ? '<circle class="nose" cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r=".5"/>' : '');
+  }
+  function sensorsSvg(pose) {
+    var h = '';
+    S.sensors.forEach(function (sn) {
+      var g = MB.sensorGeom(S, sn, pose), isS = sn.kind === 'sharp';
+      if (isS && MB.isDown(sn)) {
+        var seen = MB.sensorDist(S, sn, pose) < 50;
+        h += '<circle cx="' + g.x.toFixed(2) + '" cy="' + g.y.toFixed(2) + '" r=".7" fill="none" stroke="' + (seen ? 'var(--accent)' : 'var(--bad)') + '" stroke-width=".18"/>';
+      } else if (isS) {
+        var len = Math.min(12, MB.sensorDist(S, sn, pose));
+        h += '<line class="sbeam" x1="' + g.x.toFixed(2) + '" y1="' + g.y.toFixed(2) + '" x2="' + (g.x + g.dx * len).toFixed(2) + '" y2="' + (g.y + g.dy * len).toFixed(2) + '"/>';
+      } else {
+        var lv = MB.leverSeg(S, sn, pose), hit = MB.leverHit(S, sn, pose);
+        h += '<line class="swhisk" style="stroke-width:' + (hit ? .4 : .22) + ';' + (hit ? 'stroke:var(--bad)' : '') + '" x1="' + lv.x1.toFixed(2) + '" y1="' + lv.y1.toFixed(2) + '" x2="' + lv.x2.toFixed(2) + '" y2="' + lv.y2.toFixed(2) + '"/>';
+      }
+      h += '<circle class="' + (isS ? 'smark-sharp' : 'smark-sw') + '" cx="' + g.x.toFixed(2) + '" cy="' + g.y.toFixed(2) + '" r=".4"/>';
+    });
+    return h;
+  }
+  function drawMap() {
+    if (!sim) return;
+    var W = C.W, H = C.H, h = '';
+    h += '<defs><pattern id="chk" width="4" height="4" patternUnits="userSpaceOnUse" x="' + C.targetX.toFixed(2) + '" y="0">' +
+         '<rect class="checkA" width="2" height="2"/><rect class="checkA" x="2" y="2" width="2" height="2"/><rect class="checkB" x="2" width="2" height="2"/><rect class="checkB" y="2" width="2" height="2"/></pattern>' +
+         '<clipPath id="tclip"><rect x="' + C.targetX.toFixed(2) + '" y="0" width="' + (W - C.targetX).toFixed(2) + '" height="' + H.toFixed(2) + '"/></clipPath></defs>';
+    h += '<rect class="floor" x="0" y="0" width="' + W.toFixed(2) + '" height="' + H.toFixed(2) + '"/>';
+    h += '<rect fill="url(#chk)" clip-path="url(#tclip)" x="' + C.targetX.toFixed(2) + '" y="0" width="' + (W - C.targetX).toFixed(2) + '" height="' + H.toFixed(2) + '" opacity=".55"/>';
+    if (S.mode === 'auto') h += '<rect class="tape" x="0" y="0" width="12" height="' + H.toFixed(2) + '" opacity=".18"/>';
+    h += '<rect class="tape" x="' + C.startLine[0].toFixed(2) + '" y="0" width="' + (C.startLine[1] - C.startLine[0]).toFixed(2) + '" height="' + H.toFixed(2) + '" opacity=".85"/>';
+    C.stageLines.forEach(function (x) { h += '<line class="stageline" x1="' + x.toFixed(2) + '" y1="0" x2="' + x.toFixed(2) + '" y2="' + H.toFixed(2) + '"/>'; });
+    C.walls.forEach(function (w) { h += '<rect class="wallr" x="' + w.x.toFixed(2) + '" y="' + w.y.toFixed(2) + '" width="' + w.w.toFixed(2) + '" height="' + w.h.toFixed(2) + '"/>'; });
+    h += '<rect class="outline" x="0" y="0" width="' + W.toFixed(2) + '" height="' + H.toFixed(2) + '"/>';
+    if (S.course.end === 'edge') h += '<line x1="' + W.toFixed(2) + '" y1="0" x2="' + W.toFixed(2) + '" y2="' + H.toFixed(2) + '" stroke="var(--bad)" stroke-width=".5" stroke-dasharray="1 .8"/>';
+    [['START', C.startLine[0] / 2], ['ZONE 1', (C.startLine[1] + C.stageLines[0]) / 2], ['ZONE 2', (C.stageLines[0] + C.stageLines[1]) / 2],
+     ['ZONE 3', (C.stageLines[1] + C.stageLines[2]) / 2], ['TARGET', (C.targetX + W) / 2]].forEach(function (l) {
+      h += '<text x="' + l[1].toFixed(2) + '" y="-1.1" text-anchor="middle">' + l[0] + '</text>';
+    });
+    if (S.mode !== 'auto') sim.ranges.forEach(function (r) { h += robotSvg(r.pose, 'foot'); });
+    h += '<polyline class="pathline" points="' + sim.path.map(function (q) { return q.x.toFixed(2) + ',' + q.y.toFixed(2); }).join(' ') + '"/>';
+    if (hl >= 0 && sim.ranges[hl]) {
+      var r = sim.ranges[hl];
+      h += '<polyline class="pathhl" points="' + sim.path.slice(r.i0, r.i1 + 1).map(function (q) { return q.x.toFixed(2) + ',' + q.y.toFixed(2); }).join(' ') + '"/>';
+    }
+    h += robotSvg({ x: S.start.x, y: S.start.y, th: S.start.deg * Math.PI / 180 }, 'ghost');
+    var tt = (parseInt(scrub.value, 10) / 1000) * sim.time, pose = MB.poseAt(sim, tt);
+    h += robotSvg(pose, 'robot') + sensorsSvg(pose);
+    if (sim.stuck) {
+      var s = sim.stuck;
+      h += '<g class="hit"><line x1="' + (s.x - 1) + '" y1="' + (s.y - 1) + '" x2="' + (s.x + 1) + '" y2="' + (s.y + 1) + '"/><line x1="' + (s.x - 1) + '" y1="' + (s.y + 1) + '" x2="' + (s.x + 1) + '" y2="' + (s.y - 1) + '"/></g>';
+    }
+    mapEl.setAttribute('viewBox', '-1.5 -3.2 ' + (W + 3).toFixed(2) + ' ' + (H + 4.7).toFixed(2));
+    mapEl.innerHTML = h;
+    scrubT.textContent = f1(tt) + ' s';
+  }
+  scrub.addEventListener('input', function () { stopAnim(); drawMap(); });
+  function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; } playBtn.textContent = 'Play'; }
+  playBtn.addEventListener('click', function () {
+    if (anim) { stopAnim(); return; }
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { scrub.value = 1000; drawMap(); return; }
+    if (parseInt(scrub.value, 10) >= 1000) scrub.value = 0;
+    playBtn.textContent = 'Pause';
+    var last = null;
+    (function tick(ts) {
+      if (last === null) last = ts;
+      var dt = (ts - last) / 1000; last = ts;
+      var v = parseInt(scrub.value, 10) + dt / Math.max(sim.time, 0.5) * 1000 * 2;
+      if (v >= 1000) { scrub.value = 1000; drawMap(); stopAnim(); return; }
+      scrub.value = v; drawMap(); anim = requestAnimationFrame(tick);
+    })(performance.now());
+  });
+
+  /* ---- results ---- */
+  function stat(k, v, cls) { return '<div class="stat ' + (cls || '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
+  function drawResults() {
+    var sc = MB.scoreOf(S, sim), st = sim.stages, html = '', status, cls, auto = S.mode === 'auto';
+    if (sim.stuck) { status = sim.stuck.fell ? 'Drives off the edge early' : sim.stuck.step < 0 ? 'Start overlaps wall' : 'Hits wall at step ' + (sim.stuck.step + 1); cls = 'badx'; }
+    else if (sim.timeout) { status = auto ? 'Not at the end in ' + f1(S.cal.runLimit) + ' s' : 'Over time limit'; cls = 'badx'; }
+    else if (sim.reached) { status = 'Reaches target'; cls = 'good'; }
+    else { status = 'Stops short of target'; cls = 'warnx'; }
+    html += stat(auto ? 'This start' : 'Predicted run', status, cls);
+    html += stat('Elapsed time', f1(sc.elapsed) + ' s', '');
+    html += stat('Stages cleared', st.filter(Boolean).length + ' / 3', st.every(Boolean) ? 'good' : '');
+    html += stat(auto ? 'Wall bumps' : 'Estimated score', auto ? String(Math.round(sim.bumps / 20)) + ' (approx.)' : Math.round(sc.total) + ' / 100', '');
+    $('stats').innerHTML = html;
+    var d = S.wiring.delay, rows = [
+      ['Stages 1 to 3 (10 each)', sc.stages], ['Reaches target and stops', sc.target], ['LED turns on', sc.led], ['Rescued individuals delivered', sc.cargo],
+      ['Elapsed-time points (' + f1(d) + ' s load + ' + f1(sim.time) + ' s drive + ' + f1(S.score.unload) + ' s unload' + (sim.reached ? '' : ', incomplete run') + ')', sc.time]
+    ];
+    $('score').innerHTML = rows.map(function (r) { return '<tr><td' + (r[1] === 0 ? ' class="dim"' : '') + '>' + r[0] + '</td><td>' + (Math.round(r[1] * 10) / 10) + '</td></tr>'; }).join('') +
+      '<tr class="total"><td>Estimated total (perfect timing assumed)</td><td>' + (Math.round(sc.total * 10) / 10) + '</td></tr>';
+  }
+  function drawStepInfo() {
+    if (S.mode === 'auto') return;
+    Array.prototype.forEach.call(stepsEl.querySelectorAll('.step'), function (li, i) {
+      var r = sim.ranges[i], d = li.querySelector('[data-role="dur"]'), b = li.querySelector('[data-role="bad"]');
+      d.textContent = r ? f1(r.dur) + ' s' : 'not reached';
+      var bad = sim.stuck && sim.stuck.step === i;
+      b.hidden = !bad; b.textContent = bad ? 'Hits wall' : '';
+      li.classList.toggle('bad', !!bad);
+    });
+  }
+
+  /* ---- warnings ---- */
+  function pinList() {
+    var w = S.wiring, a = [['Motor 1 fwd', w.pins.m1f], ['Motor 1 rev', w.pins.m1r], ['Motor 2 fwd', w.pins.m2f], ['Motor 2 rev', w.pins.m2r]];
+    if (/^\d+$/.test(String(w.led).trim())) a.push(['LED', parseInt(w.led, 10)]);
+    if (w.startMode === 'button') a.push(['Start button', w.button]);
+    S.sensors.forEach(function (sn) { a.push([sn.name, sn.pin]); });
+    return a;
+  }
+  function drawWarns() {
+    var w = [], rb = S.robot, c = S.cal, auto = S.mode === 'auto', A = S.auto;
+    var R = MB.autoSensors(S), hasSw = S.sensors.some(function (x) { return x.kind === 'switch'; });
+    if (!auto && S.start.x + rb.L / 2 > C.startLine[0] + 0.01) w.push(['warn', 'The front of the robot starts past the Start line (x = ' + f1(C.startLine[0]) + ' in). Move the start x back to ' + f1(C.startLine[0] - rb.L / 2) + ' in or less.']);
+    if (rb.W > C.narrowGap - 0.1) w.push(['bad', 'The robot is ' + f1(rb.W) + ' in wide, but the narrowest gap on the track is only ' + f1(C.narrowGap) + ' in. It cannot get through.']);
+    if (Math.sqrt(rb.L * rb.L + rb.W * rb.W) > C.narrowGap) w.push(['warn', 'The robot is ' + f1(rb.L) + ' by ' + f1(rb.W) + ' in, so it cannot spin in place inside the ' + f1(C.narrowGap) + ' in gap. Turns there will push against the walls.']);
+    var seen = {}, dup = [];
+    pinList().forEach(function (p) { if (seen[p[1]] !== undefined) dup.push(seen[p[1]] + ' and ' + p[0] + ' (GP' + p[1] + ')'); else seen[p[1]] = p[0]; });
+    if (dup.length) w.push(['bad', 'Pin conflict: ' + dup.join('; ') + '. Each GP pin can only be used once.']);
+    S.sensors.forEach(function (sn) {
+      if (sn.kind === 'sharp' && [26, 27, 28].indexOf(sn.pin) < 0) w.push(['bad', sn.name + ': the Sharp sensor output must go to an ADC pin, GP26, GP27 or GP28.']);
+      if (MB.isDown(sn) && sn.height < 4) w.push(['warn', sn.name + ': the Sharp reads wrongly closer than about 4 in. Mount the down-facing sensor at least 4 in above the floor so the edge shows as a big jump.']);
+    });
+    var low = S.steps.filter(function (s) { return (s.speed > 0 && s.speed < 30) || (s.type === 'drive' && ((Math.abs(s.l) > 0 && Math.abs(s.l) < 30) || (Math.abs(s.r) > 0 && Math.abs(s.r) < 30))); }).length;
+    if (c.turnSpeed < 30 || low || (auto && A.speed < 30)) w.push(['warn', 'Some speeds are under 30 %. TT motors often stall there, so the real robot may not move as the preview shows.']);
+    if (auto) {
+      if (!S.sensors.length) w.push(['bad', 'No sensors are attached. From a random start the robot needs at least switches to find walls. Load a kit in Robot and sensors.']);
+      else if (A.style === 'bump' && !hasSw && !R.fs) w.push(['bad', 'The bump strategy needs switches or a front Sharp sensor.']);
+      if (A.style === 'wall' && !R.hb.length && !R.hs && S.sensors.length) w.push(['warn', 'Follow-a-wall needs a switch or Sharp on the ' + (A.hand === 'L' ? 'left' : 'right') + ' side, otherwise the robot drives straight between bumps.']);
+      if (A.orient && !R.fs) w.push(['warn', 'Without a front Sharp sensor the robot cannot spin to find the open direction. It will drive along its starting heading, so a start facing a wall wastes time.']);
+      if (A.finish === 'edge' && !R.ds) w.push(['warn', 'No down-facing Sharp is attached, so the robot stops on a timer (' + f1(A.stopAfter) + ' s) instead of at the edge. Add a Sharp set to "Down at the floor" for an edge stop.']);
+      if (A.finish === 'timer' && S.course.end === 'edge') w.push(['warn', 'Stopping on a timer can let the robot drive off the open edge. Set the time carefully, or use a down-facing Sharp.']);
+      if (R.fs && !hasSw) w.push(['warn', 'Only Sharp sensors are fitted: the Sharp loses range below about 4 in and has a narrow beam, so the robot can still clip corners. A bumper switch is the reliable backup.']);
+      w.push(['ok', 'Switches find walls by touching them, so bumps are expected. A front Sharp lets the robot turn before touching. Lever tilt of ' + f1(30) + '° is the default for the MS0850502F01S1A.']);
+    } else {
+      S.steps.forEach(function (s, i) {
+        if (!ST[s.type].needs) return;
+        var sn = sensorOf(s.sensor);
+        if (!sn) w.push(['bad', 'Step ' + (i + 1) + ' needs a sensor. Add one in Robot and sensors, then choose it in the step.']);
+        else if (s.type === 'follow' && sn.side !== 'left' && sn.side !== 'right') w.push(['bad', 'Step ' + (i + 1) + ': wall following needs the Sharp sensor on the left or right side.']);
+        else if (sn.kind === 'sharp' && s.type === 'until' && s.stop < 4) w.push(['warn', 'Step ' + (i + 1) + ': the Sharp sensor cannot measure closer than about 4 in (10 cm). Use a stop distance of 4 in or more.']);
+        else if (sn.kind === 'sharp' && s.type === 'follow' && s.hold < 4) w.push(['warn', 'Step ' + (i + 1) + ': hold distance under 4 in is below the Sharp sensor range.']);
+        var r = sim && sim.ranges[i];
+        if (r && !sim.stuck && s.type === 'until' && Math.abs(r.dur - s.max) < 0.02) w.push(['warn', 'Step ' + (i + 1) + ': the sensor never triggers in the preview, so the robot drives for the full ' + f1(s.max) + ' s.']);
+      });
+      var usesSensor = S.steps.some(function (s) { return s.type === 'until' || s.type === 'follow'; });
+      if (S.sensors.length && !usesSensor) w.push(['warn', 'Sensors are attached, but no step reads them yet. Add a "Forward until sensor triggers" or "Follow wall" step so the code uses them.']);
+    }
+    $('warns').innerHTML = w.map(function (x) { return '<div class="callout ' + (x[0] === 'warn' ? '' : x[0]) + '">' + esc(x[1]) + '</div>'; }).join('');
+  }
+
+  /* ---- code ---- */
+  var tab = 'main', codeEl = $('code'), codeMain = '', codeCal = '';
+  function colorize(src) {
+    return src.split('\n').map(function (ln) {
+      var i = ln.indexOf('#');
+      if (i === -1 || /["']/.test(ln.slice(0, i)) && (ln.slice(0, i).split('"').length % 2 === 0 || ln.slice(0, i).split("'").length % 2 === 0)) return esc(ln);
+      return esc(ln.slice(0, i)) + '<span class="c">' + esc(ln.slice(i)) + '</span>';
+    }).join('\n');
+  }
+  function drawCode() {
+    codeMain = MB.genMain(S, sim); codeCal = MB.genCal(S);
+    var src = tab === 'main' ? codeMain : codeCal;
+    codeEl.innerHTML = colorize(src);
+    $('code-meta').textContent = (src.split('\n').length - 1) + ' lines';
+    var how = tab === 'main' ?
+      ['Save <code>WNE103.py</code> on the Pico.', 'Paste this code into Thonny and save it on the Pico as <code>main.py</code> (or any name, then press Run).', 'Put the robot in the Start zone, load the human and both bears, then start it.'] :
+      ['Paste this code into Thonny and run it with <code>TEST = "WHEELS"</code>. Fix the Reverse boxes or the left motor port until both wheels behave.', 'Change <code>TEST</code> to <code>"STRAIGHT"</code>, run it, and measure the distance in 2 s. Enter distance ÷ 2 as the measured travel.', 'Change <code>TEST</code> to <code>"SPIN"</code>, measure the angle in 2 s, and enter angle ÷ 2 as the measured spin rate.'].concat(S.sensors.length ? ['Change <code>TEST</code> to <code>"SENSORS"</code> to check each sensor reading before you trust the route.'] : []);
+    $('how').innerHTML = how.map(function (x) { return '<li>' + x + '</li>'; }).join('');
+  }
+  function setTab(t) {
+    tab = t;
+    $('tab-main').setAttribute('aria-selected', t === 'main'); $('tab-cal').setAttribute('aria-selected', t === 'cal');
+    drawCode();
+  }
+  $('tab-main').addEventListener('click', function () { setTab('main'); });
+  $('tab-cal').addEventListener('click', function () { setTab('cal'); });
+  $('show-cal').addEventListener('click', function () { setTab('cal'); $('h-code').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('copy').addEventListener('click', function () {
+    var txt = tab === 'main' ? codeMain : codeCal, done = function () { var c = $('copied'); c.hidden = false; setTimeout(function () { c.hidden = true; }, 1800); };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents(codeEl); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      try { if (document.execCommand('copy')) done(); } catch (e) { /* selection is left for manual copy */ }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+  });
+
+  /* ---- random-start test ---- */
+  var testRes = null, testSig = '';
+  function sigOf() { var o = JSON.parse(JSON.stringify(S)); delete o.start; return JSON.stringify(o); }
+  var TRACKS = { bottom: [20.8, 28.4, 'Bottom track'], top: [3.6, 11.2, 'Top track'] };
+  function runTest() {
+    var seed = 12345, res = [], i, tk;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    ['bottom', 'top'].forEach(function (tk) {
+      var lo = TRACKS[tk][0], hi = TRACKS[tk][1];
+      for (i = 0; i < 24; i++) {
+        var st = { x: 3.6 + rnd() * 4.8, y: lo + rnd() * (hi - lo), deg: (i * 15 + Math.floor(rnd() * 15)) % 360 };
+        var T = {}, k; for (k in S) T[k] = S[k];
+        T.start = st; T.auto = JSON.parse(JSON.stringify(S.auto)); T.auto.seed = i + 1;
+        var r = MB.simulate(T);
+        res.push({ track: tk, i: i, st: st, ok: r.reached, time: r.time, x: r.maxX, stages: r.stages.filter(Boolean).length });
+      }
+    });
+    testRes = res; testSig = sigOf(); drawTest();
+  }
+  function drawTest() {
+    var sum = $('test-sum'), chips = $('test-chips');
+    if (!testRes) { sum.textContent = 'Tries the current setup from 24 random positions and headings on each track (48 runs).'; chips.innerHTML = ''; return; }
+    if (testSig !== sigOf()) { sum.textContent = 'Settings changed. Run the test again.'; }
+    else {
+      sum.innerHTML = ['bottom', 'top'].map(function (tk) {
+        var rs = testRes.filter(function (r) { return r.track === tk; }), ok = rs.filter(function (r) { return r.ok; });
+        var best = rs.reduce(function (a, r) { return Math.max(a, r.x); }, 0);
+        return TRACKS[tk][2] + ': ' + ok.length + ' of 24 reach the end zone' + (ok.length ? ' (average ' + f1(ok.reduce(function (a, r) { return a + r.time; }, 0) / ok.length) + ' s)' : '; furthest x = ' + f1(best) + ' of ' + f1(C.W) + ' in') + '.';
+      }).join('<br>');
+    }
+    chips.innerHTML = testRes.map(function (r, i) {
+      return '<button type="button" class="chip ' + (r.ok ? 'okc' : 'badc') + '" data-t="' + i + '" title="Show this start on the map">' + (r.track === 'top' ? 'Top ' : 'Bottom ') + Math.round(r.st.deg) + '&deg; ' + (r.ok ? f1(r.time) + ' s' : 'x ' + f1(r.x)) + '</button>';
+    }).join('');
+  }
+  $('run-test').addEventListener('click', runTest);
+  $('test-chips').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-t]'); if (!b || !testRes) return;
+    var r = testRes[parseInt(b.dataset.t, 10)]; S.track = r.track; S.start = { x: r.st.x, y: r.st.y, deg: r.st.deg };
+    S.auto.seed = r.i + 1; syncInputs(); refresh();
+  });
+
+  function refreshModeUi() {
+    var auto = S.mode === 'auto';
+    $('auto-ui').hidden = !auto; $('steps-ui').hidden = auto;
+    $('mode-auto').setAttribute('aria-pressed', auto); $('mode-steps').setAttribute('aria-pressed', !auto);
+    $('mode-auto').classList.toggle('primary', auto); $('mode-steps').classList.toggle('primary', !auto);
+    $('route-hint').textContent = auto ? 'The robot starts at a random position and heading in the Start zone, so the code reacts to what the sensors see.' : 'Timed steps that only work from a known start position and heading.';
+    document.querySelectorAll('.f-bump').forEach(function (e) { e.hidden = S.auto.style !== 'bump'; });
+    document.querySelectorAll('.f-wall').forEach(function (e) { e.hidden = S.auto.style !== 'wall'; });
+    document.querySelectorAll('.f-timer').forEach(function (e) { e.hidden = S.auto.finish !== 'timer'; });
+    document.querySelectorAll('.f-edge').forEach(function (e) { e.hidden = S.auto.finish !== 'edge'; });
+    $('auto-note').textContent = S.auto.style === 'bump'
+      ? 'Drives toward the end. When a switch is pressed it backs up and turns away from that side by a random angle, then steers back toward the end using its own turn count. A front Sharp turns it before it touches.'
+      : 'Keeps a wall on one side using the side switch (or side Sharp). Turns away on a front bump. Works best with a front Sharp and a long side lever.';
+  }
+  function refresh() {
+    if (S.mode === 'auto' && TRACKS[S.track] && (S.start.y < TRACKS[S.track][0] - 4 || S.start.y > TRACKS[S.track][1] + 4)) { S.start.y = (TRACKS[S.track][0] + TRACKS[S.track][1]) / 2; syncInputs(); }
+    sim = MB.simulate(S);
+    if (!anim) scrub.value = 1000;
+    refreshModeUi(); drawDiagram(); drawMap(); drawResults(); drawStepInfo(); drawWarns(); drawCode(); drawTest(); save();
+  }
+  renderSensors(); renderSteps(); refresh();
+  if (!saved || !Array.isArray(saved.sensors)) kit(true);
+  window.__mb = { S: S, refresh: refresh, applyPreset: applyPreset, runTest: runTest, kit: kit, setMode: setMode };
+})();
+</script>
+
+</body></html>
